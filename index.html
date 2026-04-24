@@ -1,169 +1,115 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
-  <title>ENVISIONED MARKETING Review Page</title>
+  <title>Review Helper</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    * { box-sizing: border-box; }
-
     body {
-      margin: 0;
-      min-height: 100vh;
       font-family: Arial, sans-serif;
-      background: radial-gradient(circle at top, #2b2b2b, #050505 65%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 22px;
-      color: #111;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 430px;
+      padding: 25px;
+      max-width: 500px;
+      margin: auto;
       background: #fff;
-      border-radius: 26px;
-      padding: 30px;
-      box-shadow: 0 24px 70px rgba(0,0,0,0.45);
-    }
-
-    .brand {
-      text-align: center;
-      font-size: 13px;
-      letter-spacing: 2.5px;
-      font-weight: 800;
-      color: #777;
-      text-transform: uppercase;
-      margin-bottom: 10px;
     }
 
     h1 {
+      font-size: 26px;
       text-align: center;
-      margin: 8px 0 6px;
-      font-size: 30px;
+      margin-bottom: 10px;
     }
 
-    .subtitle {
+    .business {
       text-align: center;
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
-
-    .business-box {
-      background: #f3f3f3;
-      border-radius: 16px;
-      padding: 18px;
-      text-align: center;
-      margin-bottom: 18px;
-    }
-
-    .label {
-      font-size: 12px;
-      color: #777;
-      letter-spacing: 1px;
       font-weight: bold;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    #businessName {
-      font-size: 22px;
-      font-weight: 800;
+      font-size: 20px;
+      margin-bottom: 10px;
     }
 
     textarea {
       width: 100%;
       height: 160px;
-      padding: 15px;
-      border-radius: 14px;
-      border: 1px solid #ccc;
       font-size: 16px;
-      resize: none;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
       margin-top: 10px;
+      line-height: 1.4;
     }
 
     button, a {
       display: block;
       width: 100%;
       padding: 15px;
-      border-radius: 14px;
-      border: none;
-      font-size: 16px;
-      font-weight: 800;
-      margin-top: 12px;
+      margin-top: 15px;
       text-align: center;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
       text-decoration: none;
-      cursor: pointer;
+      font-weight: bold;
     }
 
-    button { background: #111; color: white; }
-
-    a {
+    /* 🔵 COPY BUTTON */
+    .copy-btn {
       background: #0b57d0;
       color: white;
     }
 
+    /* 🟢 GOOGLE BUTTON */
+    .google-btn {
+      background: #1db954;
+      color: white;
+    }
+
+    /* ⚫ GENERATE */
+    .generate-btn {
+      background: #111;
+      color: white;
+    }
+
     .secondary {
-      background: #f2f2f2;
+      background: #eee;
       color: #111;
       border: 1px solid #ddd;
     }
 
     .note {
+      font-size: 14px;
+      color: #555;
+      margin-top: 12px;
       text-align: center;
-      color: #777;
-      font-size: 12px;
-      line-height: 1.5;
-      margin-top: 18px;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="card">
-    <div class="brand">ENVISIONED MARKETING</div>
+  <h1>Leave Us a Google Review</h1>
 
-    <h1>Leave a Review</h1>
+  <div class="business" id="businessName">Loading...</div>
 
-    <p class="subtitle">
-      Use the suggested review below, but please edit it to match your real experience.
-    </p>
+  <p>Edit this review so it matches your real experience.</p>
 
-    <div class="business-box">
-      <div class="label">You were matched with</div>
-      <div id="businessName">Loading...</div>
-    </div>
+  <textarea id="reviewText"></textarea>
 
-    <textarea id="reviewText"></textarea>
+  <button class="generate-btn" onclick="generateReview()">Generate New Review</button>
 
-    <button onclick="generateReview()">Generate New Review</button>
-    <button onclick="copyReview()">Copy Review</button>
+  <button class="copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" target="_blank" onclick="trackReviewClick()">
-      Open Google Review Page
-    </a>
+  <a id="googleReviewLink" class="google-btn" target="_blank" onclick="trackClick()">
+    Leave Review on Google
+  </a>
 
-    <button class="secondary" onclick="pickRandomBusiness()">
-      Show Another Company
-    </button>
+  <button class="secondary" onclick="pickRandomBusiness()">Show Another Business</button>
 
-    <p class="note">
-      Only leave an honest review for a business you actually visited or received service from.
-    </p>
-  </div>
+  <p class="note">
+    Please leave an honest review based on your real experience.
+  </p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-    import {
-      getFirestore,
-      doc,
-      updateDoc,
-      increment
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
@@ -171,8 +117,7 @@
       projectId: "envisionedmktng",
       storageBucket: "envisionedmktng.firebasestorage.app",
       messagingSenderId: "1075132261537",
-      appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
-      measurementId: "G-8XY38GQQ86"
+      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -182,77 +127,65 @@
     const employeeId = params.get("employee");
 
     const businesses = [
-      {
-        id: "business-one",
-        name: "Business One",
-        link: "PASTE GOOGLE REVIEW LINK HERE"
-      },
-      {
-        id: "business-two",
-        name: "Business Two",
-        link: "PASTE GOOGLE REVIEW LINK HERE"
-      },
-      {
-        id: "business-three",
-        name: "Business Three",
-        link: "PASTE GOOGLE REVIEW LINK HERE"
-      }
+      { name: "Business One", link: "PASTE GOOGLE REVIEW LINK HERE" },
+      { name: "Business Two", link: "PASTE GOOGLE REVIEW LINK HERE" },
+      { name: "Business Three", link: "PASTE GOOGLE REVIEW LINK HERE" }
     ];
 
     let currentBusiness = null;
 
+    // 🔥 EXPANDED FOR “ENDLESS” REVIEWS
     const openings = [
       "I had a great experience with",
       "I really enjoyed my visit to",
       "I had an amazing experience at",
-      "I’m very satisfied with",
-      "My experience with",
-      "I recently visited"
+      "From start to finish my experience with",
+      "I was really impressed with",
+      "I recently had the chance to visit",
+      "I can honestly say my experience with"
     ];
 
     const serviceWords = [
       "the service was excellent",
       "the staff was very professional",
       "the team was extremely helpful",
-      "the customer service was great",
-      "the experience was smooth and easy",
-      "the staff was friendly and welcoming"
+      "everything was handled smoothly",
+      "the experience was very easy",
+      "the communication was great",
+      "the staff made everything comfortable"
     ];
 
     const positives = [
-      "everything was handled well",
+      "everything was handled perfectly",
       "they took great care of me",
       "the process was fast and simple",
       "I felt valued as a customer",
       "they exceeded my expectations",
-      "everything was organized and efficient"
+      "everything was organized and efficient",
+      "I had no issues at all"
     ];
 
     const endings = [
       "I would definitely recommend them.",
       "I’ll definitely be coming back.",
-      "Highly recommend.",
+      "Highly recommend to anyone.",
       "I’d gladly use them again.",
       "Great experience overall.",
-      "Definitely worth it."
+      "Definitely worth it.",
+      "10/10 experience."
     ];
 
     function random(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    async function updateEmployeeStat(fieldName) {
+    async function updateStat(field) {
       if (!employeeId) return;
-
-      const employeeRef = doc(db, "employees", employeeId);
-
       try {
-        await updateDoc(employeeRef, {
-          [fieldName]: increment(1)
+        await updateDoc(doc(db, "employees", employeeId), {
+          [field]: increment(1)
         });
-      } catch (error) {
-        console.log("Tracking error:", error.message);
-      }
+      } catch (e) {}
     }
 
     window.pickRandomBusiness = async function () {
@@ -262,128 +195,28 @@
       document.getElementById("googleReviewLink").href = currentBusiness.link;
 
       generateReview();
-
-      await updateEmployeeStat("scans");
+      await updateStat("scans");
     };
 
     window.generateReview = function () {
-      if (!currentBusiness) return;
-
       const review = `${random(openings)} ${currentBusiness.name}. ${random(serviceWords)} and ${random(positives)}. ${random(endings)}`;
-
       document.getElementById("reviewText").value = review;
     };
 
     window.copyReview = async function () {
       const text = document.getElementById("reviewText");
-
       text.select();
-      text.setSelectionRange(0, 99999);
-
       await navigator.clipboard.writeText(text.value);
-
-      await updateEmployeeStat("copiedReviews");
-
+      await updateStat("copiedReviews");
       alert("Review copied!");
     };
 
-    window.trackReviewClick = async function () {
-      await updateEmployeeStat("reviewClicks");
+    window.trackClick = async function () {
+      await updateStat("reviewClicks");
     };
 
     pickRandomBusiness();
   </script>
-
-</body>
-</html>
-<html>
-<head>
-  <title>ENVISIONED MARKETING Review Page</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-</head>
-<body>
-
-<h1>Leave a Google Review</h1>
-
-<p>You were matched with:</p>
-<h2 id="businessName">Loading...</h2>
-
-<textarea id="reviewText"></textarea>
-
-<button onclick="generateReview()">Generate Review</button>
-<button onclick="copyReview()">Copy Review</button>
-<a id="googleReviewLink" target="_blank" onclick="trackClick()">Open Google Review Page</a>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  updateDoc,
-  increment
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-  authDomain: "envisionedmktng.firebaseapp.com",
-  projectId: "envisionedmktng",
-  storageBucket: "envisionedmktng.firebasestorage.app",
-  messagingSenderId: "1075132261537",
-  appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
-  measurementId: "G-8XY38GQQ86"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-const params = new URLSearchParams(window.location.search);
-const employeeId = params.get("employee");
-
-const businesses = [
-  {
-    name: "Business One",
-    link: "PASTE GOOGLE REVIEW LINK HERE"
-  },
-  {
-    name: "Business Two",
-    link: "PASTE GOOGLE REVIEW LINK HERE"
-  }
-];
-
-let currentBusiness = businesses[Math.floor(Math.random() * businesses.length)];
-
-document.getElementById("businessName").innerText = currentBusiness.name;
-document.getElementById("googleReviewLink").href = currentBusiness.link;
-
-async function updateStat(field) {
-  if (!employeeId) return;
-
-  const ref = doc(db, "employees", employeeId);
-  await updateDoc(ref, {
-    [field]: increment(1)
-  });
-}
-
-window.generateReview = function () {
-  document.getElementById("reviewText").value =
-    `I had a great experience with ${currentBusiness.name}. The service was professional, friendly, and smooth from start to finish.`;
-};
-
-window.copyReview = async function () {
-  const text = document.getElementById("reviewText");
-  text.select();
-  await navigator.clipboard.writeText(text.value);
-  await updateStat("copiedReviews");
-  alert("Review copied!");
-};
-
-window.trackClick = async function () {
-  await updateStat("reviewClicks");
-};
-
-await updateStat("scans");
-generateReview();
-</script>
 
 </body>
 </html>
