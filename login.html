@@ -5,17 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
       min-height: 100vh;
       font-family: Arial, sans-serif;
-      background:
-        radial-gradient(circle at top left, #2f2f2f, transparent 35%),
-        linear-gradient(135deg, #050505, #151515);
+      background: radial-gradient(circle at top, #2b2b2b, #050505 65%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -46,7 +42,6 @@
       text-align: center;
       margin: 8px 0 6px;
       font-size: 30px;
-      line-height: 1.1;
     }
 
     .subtitle {
@@ -73,11 +68,10 @@
       border: 1px solid #d5d5d5;
       font-size: 16px;
       outline: none;
+      background: white;
     }
 
-    input:focus {
-      border-color: #111;
-    }
+    input:focus { border-color: #111; }
 
     button {
       width: 100%;
@@ -90,22 +84,9 @@
       cursor: pointer;
     }
 
-    .primary {
-      background: #111;
-      color: white;
-    }
-
-    .secondary {
-      background: #f2f2f2;
-      color: #111;
-      border: 1px solid #ddd;
-    }
-
-    .danger {
-      background: #fff0f0;
-      color: #a00000;
-      border: 1px solid #ffc9c9;
-    }
+    .primary { background: #111; color: white; }
+    .secondary { background: #f2f2f2; color: #111; border: 1px solid #ddd; }
+    .danger { background: #fff0f0; color: #a00000; border: 1px solid #ffc9c9; }
 
     .message {
       display: none;
@@ -117,15 +98,8 @@
       line-height: 1.4;
     }
 
-    .error {
-      background: #ffe5e5;
-      color: #9b0000;
-    }
-
-    .success {
-      background: #e8ffe8;
-      color: #006600;
-    }
+    .error { background: #ffe5e5; color: #9b0000; }
+    .success { background: #e8ffe8; color: #006600; }
 
     .note {
       text-align: center;
@@ -166,14 +140,15 @@
   </div>
 
   <script type="module">
-
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
     import {
       getAuth,
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
-      sendPasswordResetEmail
+      sendPasswordResetEmail,
+      setPersistence,
+      browserLocalPersistence
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     import {
@@ -182,7 +157,6 @@
       setDoc,
       getDoc
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
 
     const firebaseConfig = {
       const firebaseConfig = {
@@ -195,11 +169,11 @@
   measurementId: "G-8XY38GQQ86"
 };
 
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    await setPersistence(auth, browserLocalPersistence);
 
     function showMessage(text, type) {
       const box = document.getElementById("messageBox");
@@ -208,11 +182,10 @@
       box.style.display = "block";
     }
 
-
     function friendlyError(code) {
       const messages = {
         "auth/email-already-in-use": "This email already has an account. Tap Login instead.",
-        "auth/weak-password": "Password is too short. It must be at least 6 characters.",
+        "auth/weak-password": "Password must be at least 6 characters.",
         "auth/invalid-email": "Please enter a valid email address.",
         "auth/missing-email": "Please enter an email address.",
         "auth/missing-password": "Please enter a password.",
@@ -220,13 +193,11 @@
         "auth/user-not-found": "No account exists with this email. Tap Create Account first.",
         "auth/wrong-password": "Wrong password. Try again or reset your password.",
         "auth/too-many-requests": "Too many attempts. Wait a few minutes, then try again.",
-        "auth/network-request-failed": "Network error. Check your internet and try again.",
-        "auth/configuration-not-found": "Firebase login is not enabled. Turn on Email/Password in Firebase Authentication."
+        "auth/network-request-failed": "Network error. Check your internet and try again."
       };
 
       return messages[code] || "Something went wrong: " + code;
     }
-
 
     function getInputs() {
       return {
@@ -234,7 +205,6 @@
         password: document.getElementById("password").value.trim()
       };
     }
-
 
     function validate(email, password, requirePassword = true) {
       if (!email) {
@@ -260,7 +230,6 @@
       return true;
     }
 
-
     async function createEmployeeProfile(user) {
       const employeeRef = doc(db, "employees", user.uid);
       const employeeSnap = await getDoc(employeeRef);
@@ -277,7 +246,6 @@
       }
     }
 
-
     window.signup = async function () {
       const { email, password } = getInputs();
 
@@ -290,14 +258,13 @@
         showMessage("Account created successfully. Redirecting...", "success");
 
         setTimeout(() => {
-          window.location.href = "./employee.html";
+          window.location.href = "./employee.html?fresh=" + Date.now();
         }, 900);
 
       } catch (error) {
         showMessage(friendlyError(error.code), "error");
       }
     };
-
 
     window.login = async function () {
       const { email, password } = getInputs();
@@ -311,14 +278,13 @@
         showMessage("Login successful. Redirecting...", "success");
 
         setTimeout(() => {
-          window.location.href = "./employee.html";
+          window.location.href = "./employee.html?fresh=" + Date.now();
         }, 700);
 
       } catch (error) {
         showMessage(friendlyError(error.code), "error");
       }
     };
-
 
     window.resetPassword = async function () {
       const { email } = getInputs();
@@ -328,12 +294,10 @@
       try {
         await sendPasswordResetEmail(auth, email);
         showMessage("Password reset email sent. Check your inbox or spam folder.", "success");
-
       } catch (error) {
         showMessage(friendlyError(error.code), "error");
       }
     };
-
   </script>
 
 </body>
