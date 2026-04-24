@@ -3,156 +3,83 @@
 <head>
   <title>Review Helper</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 25px;
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-    }
-
-    h1 {
-      font-size: 26px;
-      text-align: center;
-      margin-bottom: 10px;
-    }
-
-    .business {
-      text-align: center;
-      font-weight: bold;
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-
-    textarea {
-      width: 100%;
-      height: 160px;
-      font-size: 16px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
-      line-height: 1.4;
-    }
-
+    body { font-family: Arial, sans-serif; padding: 25px; max-width: 500px; margin: auto; }
+    h1 { font-size: 26px; }
+    textarea { width: 100%; height: 150px; font-size: 16px; padding: 12px; }
     button, a {
-      display: block;
-      width: 100%;
-      padding: 15px;
-      margin-top: 15px;
-      text-align: center;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      text-decoration: none;
-      font-weight: bold;
+      display: block; width: 100%; padding: 15px; margin-top: 15px;
+      background: #111; color: white; text-align: center; border: none;
+      border-radius: 8px; font-size: 16px; text-decoration: none;
     }
-
-    /* 🔵 COPY BUTTON */
-    .copy-btn {
-      background: #0b57d0;
-      color: white;
-    }
-
-    /* 🟢 GOOGLE BUTTON */
-    .google-btn {
-      background: #1db954;
-      color: white;
-    }
-
-    /* ⚫ GENERATE */
-    .generate-btn {
-      background: #111;
-      color: white;
-    }
-
-    .secondary {
-      background: #eee;
-      color: #111;
-      border: 1px solid #ddd;
-    }
-
-    .note {
-      font-size: 14px;
-      color: #555;
-      margin-top: 12px;
-      text-align: center;
-    }
+    .note { font-size: 14px; color: #555; margin-top: 12px; }
   </style>
 </head>
-
 <body>
 
   <h1>Leave Us a Google Review</h1>
 
-  <div class="business" id="businessName">Loading...</div>
-
-  <p>Edit this review so it matches your real experience.</p>
+  <p>Here’s a suggested review. Please edit it so it matches your real experience.</p>
 
   <textarea id="reviewText"></textarea>
 
-  <button class="generate-btn" onclick="generateReview()">Generate New Review</button>
+  <button onclick="generateReview()">Generate New Review</button>
+  <button onclick="copyReview()">Copy Review</button>
 
-  <button class="copy-btn" onclick="copyReview()">Copy Suggested Review</button>
-
-  <a id="googleReviewLink" class="google-btn" target="_blank" onclick="trackClick()">
-    Leave Review on Google
-  </a>
-
-  <button class="secondary" onclick="pickRandomBusiness()">Show Another Business</button>
+  <a id="googleReviewLink" target="_blank">Open Google Review Page</a>
 
   <p class="note">
-    Please leave an honest review based on your real experience.
+    Please only leave an honest review based on your real experience.
   </p>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <script>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-      authDomain: "envisionedmktng.firebaseapp.com",
-      projectId: "envisionedmktng",
-      storageBucket: "envisionedmktng.firebasestorage.app",
-      messagingSenderId: "1075132261537",
-      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const params = new URLSearchParams(window.location.search);
-    const employeeId = params.get("employee");
-
+    // 🔥 YOUR BUSINESS LIST (ADD UNLIMITED HERE)
     const businesses = [
-      { name: "Business One", link: "PASTE GOOGLE REVIEW LINK HERE" },
-      { name: "Business Two", link: "PASTE GOOGLE REVIEW LINK HERE" },
-      { name: "Business Three", link: "PASTE GOOGLE REVIEW LINK HERE" }
+      {
+        name: "Business One",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      },
+      {
+        name: "Business Two",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      },
+      {
+        name: "Business Three",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      }
     ];
 
     let currentBusiness = null;
 
-    // 🔥 EXPANDED FOR “ENDLESS” REVIEWS
+    function random(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // 🔥 PICK RANDOM BUSINESS ON LOAD
+    function pickRandomBusiness() {
+      currentBusiness = random(businesses);
+      document.getElementById("googleReviewLink").href = currentBusiness.link;
+      generateReview();
+    }
+
+    // 🔥 Unlimited review builder parts
     const openings = [
       "I had a great experience with",
       "I really enjoyed my visit to",
       "I had an amazing experience at",
-      "From start to finish my experience with",
-      "I was really impressed with",
-      "I recently had the chance to visit",
-      "I can honestly say my experience with"
+      "I’m very satisfied with",
+      "My experience with",
+      "I recently visited"
     ];
 
     const serviceWords = [
-      "the service was excellent",
-      "the staff was very professional",
-      "the team was extremely helpful",
-      "everything was handled smoothly",
-      "the experience was very easy",
-      "the communication was great",
-      "the staff made everything comfortable"
+      "service was excellent",
+      "staff was very professional",
+      "team was extremely helpful",
+      "customer service was top tier",
+      "experience was smooth and easy",
+      "staff was friendly and welcoming"
     ];
 
     const positives = [
@@ -161,8 +88,7 @@
       "the process was fast and simple",
       "I felt valued as a customer",
       "they exceeded my expectations",
-      "everything was organized and efficient",
-      "I had no issues at all"
+      "everything was organized and efficient"
     ];
 
     const endings = [
@@ -171,51 +97,28 @@
       "Highly recommend to anyone.",
       "I’d gladly use them again.",
       "Great experience overall.",
-      "Definitely worth it.",
-      "10/10 experience."
+      "Definitely worth it."
     ];
 
-    function random(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
+    function generateReview() {
+      if (!currentBusiness) return;
 
-    async function updateStat(field) {
-      if (!employeeId) return;
-      try {
-        await updateDoc(doc(db, "employees", employeeId), {
-          [field]: increment(1)
-        });
-      } catch (e) {}
-    }
+      const review = `${random(openings)} ${currentBusiness.name}. Their ${random(serviceWords)} and ${random(positives)}. ${random(endings)}`;
 
-    window.pickRandomBusiness = async function () {
-      currentBusiness = random(businesses);
-
-      document.getElementById("businessName").innerText = currentBusiness.name;
-      document.getElementById("googleReviewLink").href = currentBusiness.link;
-
-      generateReview();
-      await updateStat("scans");
-    };
-
-    window.generateReview = function () {
-      const review = `${random(openings)} ${currentBusiness.name}. ${random(serviceWords)} and ${random(positives)}. ${random(endings)}`;
       document.getElementById("reviewText").value = review;
-    };
+    }
 
-    window.copyReview = async function () {
+    function copyReview() {
       const text = document.getElementById("reviewText");
       text.select();
-      await navigator.clipboard.writeText(text.value);
-      await updateStat("copiedReviews");
+      text.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(text.value);
       alert("Review copied!");
-    };
+    }
 
-    window.trackClick = async function () {
-      await updateStat("reviewClicks");
-    };
-
+    // 🔥 RUN ON PAGE LOAD (QR SCAN)
     pickRandomBusiness();
+
   </script>
 
 </body>
