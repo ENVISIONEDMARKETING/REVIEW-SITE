@@ -63,13 +63,8 @@
       box-sizing: border-box;
     }
 
-    .green-btn {
-      background: #1db954;
-    }
-
-    .blue-btn {
-      background: #0b57d0;
-    }
+    .green-btn { background: #1db954; }
+    .blue-btn { background: #0b57d0; }
 
     .note {
       font-size: 14px;
@@ -142,17 +137,22 @@
         await updateDoc(doc(db, "employees", employeeId), {
           [field]: increment(1)
         });
-      } catch (e) {}
+      } catch (e) {
+        console.log("Tracking error:", e.message);
+      }
     }
 
-    function pickRandomBusiness() {
+    // 🔥 FIXED: NOW COUNTS EVERY SCAN RELIABLY
+    async function pickRandomBusiness() {
       currentBusiness = random(businesses);
 
       document.getElementById("businessName").innerText = currentBusiness.name;
       document.getElementById("googleReviewLink").href = currentBusiness.link;
 
       generateReview();
-      updateStat("scans");
+
+      // 👇 THIS NOW WAITS (IMPORTANT)
+      await updateStat("scans");
     }
 
     const openings = [
@@ -222,6 +222,7 @@
       await updateStat("reviewClicks");
     };
 
+    // 🔥 RUN ON PAGE LOAD (QR SCAN)
     pickRandomBusiness();
   </script>
 
