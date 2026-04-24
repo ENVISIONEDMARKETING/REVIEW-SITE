@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Review Helper</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 25px; max-width: 500px; margin: auto; }
+    h1 { font-size: 26px; }
+    textarea { width: 100%; height: 150px; font-size: 16px; padding: 12px; }
+    button, a {
+      display: block; width: 100%; padding: 15px; margin-top: 15px;
+      background: #111; color: white; text-align: center; border: none;
+      border-radius: 8px; font-size: 16px; text-decoration: none;
+    }
+    .note { font-size: 14px; color: #555; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+  <h1>Leave Us a Google Review</h1>
+
+  <p>Here’s a suggested review. Please edit it so it matches your real experience.</p>
+
+  <textarea id="reviewText"></textarea>
+
+  <button onclick="generateReview()">Generate New Review</button>
+  <button onclick="copyReview()">Copy Review</button>
+
+  <a id="googleReviewLink" target="_blank">Open Google Review Page</a>
+
+  <p class="note">
+    Please only leave an honest review based on your real experience.
+  </p>
+
+  <script>
+
+    // 🔥 YOUR BUSINESS LIST (ADD UNLIMITED HERE)
+    const businesses = [
+      {
+        name: "Business One",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      },
+      {
+        name: "Business Two",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      },
+      {
+        name: "Business Three",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      }
+    ];
+
+    let currentBusiness = null;
+
+    function random(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // 🔥 PICK RANDOM BUSINESS ON LOAD
+    function pickRandomBusiness() {
+      currentBusiness = random(businesses);
+      document.getElementById("googleReviewLink").href = currentBusiness.link;
+      generateReview();
+    }
+
+    // 🔥 Unlimited review builder parts
+    const openings = [
+      "I had a great experience with",
+      "I really enjoyed my visit to",
+      "I had an amazing experience at",
+      "I’m very satisfied with",
+      "My experience with",
+      "I recently visited"
+    ];
+
+    const serviceWords = [
+      "service was excellent",
+      "staff was very professional",
+      "team was extremely helpful",
+      "customer service was top tier",
+      "experience was smooth and easy",
+      "staff was friendly and welcoming"
+    ];
+
+    const positives = [
+      "everything was handled perfectly",
+      "they took great care of me",
+      "the process was fast and simple",
+      "I felt valued as a customer",
+      "they exceeded my expectations",
+      "everything was organized and efficient"
+    ];
+
+    const endings = [
+      "I would definitely recommend them.",
+      "I’ll definitely be coming back.",
+      "Highly recommend to anyone.",
+      "I’d gladly use them again.",
+      "Great experience overall.",
+      "Definitely worth it."
+    ];
+
+    function generateReview() {
+      if (!currentBusiness) return;
+
+      const review = `${random(openings)} ${currentBusiness.name}. Their ${random(serviceWords)} and ${random(positives)}. ${random(endings)}`;
+
+      document.getElementById("reviewText").value = review;
+    }
+
+    function copyReview() {
+      const text = document.getElementById("reviewText");
+      text.select();
+      text.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(text.value);
+      alert("Review copied!");
+    }
+
+    // 🔥 RUN ON PAGE LOAD (QR SCAN)
+    pickRandomBusiness();
+
+  </script>
+
+</body>
+</html>
