@@ -65,11 +65,37 @@
       border: 1px solid #ddd;
     }
 
+    .danger {
+      background: #b00020;
+      color: white;
+    }
+
+    .message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 10px;
+      display: none;
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .error {
+      background: #ffe5e5;
+      color: #9b0000;
+    }
+
+    .success {
+      background: #e8ffe8;
+      color: #006600;
+    }
+
     .note {
       font-size: 13px;
       color: #777;
       text-align: center;
       margin-top: 15px;
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -82,13 +108,17 @@
     <h2>Employee Login</h2>
 
     <input id="email" type="email" placeholder="Email" />
-    <input id="password" type="password" placeholder="Password" />
+    <input id="password" type="password" placeholder="Password - minimum 6 characters" />
 
     <button onclick="login()">Login</button>
     <button class="secondary" onclick="signup()">Create Account</button>
+    <button class="danger" onclick="resetPassword()">Reset Password</button>
+
+    <div id="messageBox" class="message"></div>
 
     <p class="note">
-      Employees must create an account or login to access their personal QR dashboard.
+      New employees must tap “Create Account” first. Returning employees tap “Login.” 
+      Passwords must be at least 6 characters.
     </p>
   </div>
 
@@ -99,7 +129,8 @@
     import {
       getAuth,
       createUserWithEmailAndPassword,
-      signInWithEmailAndPassword
+      signInWithEmailAndPassword,
+      sendPasswordResetEmail
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     import {
@@ -110,16 +141,15 @@
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 
-    // 🔥 REPLACE THIS  YOUR REAL FIREBASE CONFIG
 const firebaseConfig = {
-    apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-    authDomain: "envisionedmktng.firebaseapp.com",
-    projectId: "envisionedmktng",
-    storageBucket: "envisionedmktng.firebasestorage.app",
-    messagingSenderId: "1075132261537",
-    appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
-    measurementId: "G-8XY38GQQ86"
-  };
+  apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
+  authDomain: "envisionedmktng.firebaseapp.com",
+  projectId: "envisionedmktng",
+  storageBucket: "envisionedmktng.firebasestorage.app",
+  messagingSenderId: "1075132261537",
+  appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
+  measurementId: "G-8XY38GQQ86"
+};
 
 
     const app = initializeApp(firebaseConfig);
@@ -127,43 +157,93 @@ const firebaseConfig = {
     const db = getFirestore(app);
 
 
+    function showMessage(text, type) {
+      const box = document.getElementById("messageBox");
+      box.innerText = text;
+      box.className = "message " + type;
+      box.style.display = "block";
+    }
+
+
+    function getFriendlyError(errorCode) {
+      const messages = {
+        "auth/email-already-in-use": "This email already has an account. Tap Login instead, or tap Reset Password if they forgot it.",
+        "auth/weak-password": "Password is too short. It must be at least 6 characters.",
+        "auth/invalid-email": "This email address is not valid. Please check the spelling.",
+        "auth/missing-email": "Please enter an email address.",
+        "auth/missing-password": "Please enter a password.",
+        "auth/invalid-credential": "This login did not work. The account may not exist, or the password may be wrong. New employees should tap Create Account first.",
+        "auth/user-not-found": "No account exists with this email. Tap Create Account first.",
+        "auth/wrong-password": "Wrong password. Try again or tap Reset Password.",
+        "auth/too-many-requests": "Too many attempts. Wait a few minutes, then try again.",
+        "auth/network-request-failed": "Network error. Check your internet connection and try again.",
+        "auth/configuration-not-found": "Firebase login is not fully enabled. Turn on Email/Password in Firebase Authentication."
+      };
+
+      return messages[errorCode] || "Something went wrong: " + errorCode;
+    }
+
+
+    function validateEmailAndPassword(email, password, requirePassword = true) {
+      if (!email) {
+        showMessage("Please enter an email address.", "error");
+        return false;
+      }
+
+      if (!email.includes("@") || !email.includes(".")) {
+        showMessage("Please enter a valid email address.", "error");
+        return false;
+      }
+
+      if (requirePassword && !password) {
+        showMessage("Please enter a password.", "error");
+        return false;
+      }
+
+      if (requirePassword && password.length < 6) {
+        showMessage("Password is too short. It must be at least 6 characters.", "error");
+        return false;
+      }
+
+      return true;
+    }
+
+
+    async function createEmployeeProfile(user) {
+      const employeeRef = doc(db, "employees", user.uid);
+      const employeeSnap = await getDoc(employeeRef);
+
+      if (!employeeSnap.exists()) {
+        await setDoc(employeeRef, {
+          uid: user.uid,
+          email: user.email,
+          scans: 0,
+          copiedReviews: 0,
+          reviewClicks: 0,
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+
+
     window.signup = async function () {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      if (!email || !password) {
-        alert("Please enter an email and password.");
-        return;
-      }
-
-      if (password.length < 6) {
-        alert("Password must be at least 6 characters.");
-        return;
-      }
+      if (!validateEmailAndPassword(email, password, true)) return;
 
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        await createEmployeeProfile(userCredential.user);
 
-        const employeeRef = doc(db, "employees", user.uid);
-        const employeeSnap = await getDoc(employeeRef);
+        showMessage("Account created successfully. Redirecting...", "success");
 
-        if (!employeeSnap.exists()) {
-          await setDoc(employeeRef, {
-            uid: user.uid,
-            email: user.email,
-            scans: 0,
-            copiedReviews: 0,
-            reviewClicks: 0,
-            createdAt: new Date().toISOString()
-          });
-        }
-
-        alert("Account created successfully!");
-        window.location.href = "employee.html";
+        setTimeout(() => {
+          window.location.href = "employee.html";
+        }, 1000);
 
       } catch (error) {
-        alert(error.message);
+        showMessage(getFriendlyError(error.code), "error");
       }
     };
 
@@ -172,17 +252,36 @@ const firebaseConfig = {
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      if (!email || !password) {
-        alert("Please enter your email and password.");
-        return;
-      }
+      if (!validateEmailAndPassword(email, password, true)) return;
 
       try {
-        await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = "employee.html";
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        await createEmployeeProfile(userCredential.user);
+
+        showMessage("Login successful. Redirecting...", "success");
+
+        setTimeout(() => {
+          window.location.href = "employee.html";
+        }, 700);
 
       } catch (error) {
-        alert(error.message);
+        showMessage(getFriendlyError(error.code), "error");
+      }
+    };
+
+
+    window.resetPassword = async function () {
+      const email = document.getElementById("email").value.trim();
+
+      if (!validateEmailAndPassword(email, "", false)) return;
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+
+        showMessage("Password reset email sent. Check your inbox or spam folder.", "success");
+
+      } catch (error) {
+        showMessage(getFriendlyError(error.code), "error");
       }
     };
 
