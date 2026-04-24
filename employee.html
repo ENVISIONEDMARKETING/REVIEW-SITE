@@ -1,1 +1,241 @@
-Employee dashboard with personal QR link and personal scan/click/copy stats.
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Employee Dashboard | ENVISIONED MARKETING</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b0b0b;
+      color: #111;
+      padding: 20px;
+    }
+
+    .box {
+      max-width: 520px;
+      margin: 30px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+
+    .brand {
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 2px;
+      font-weight: bold;
+      color: #777;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button, a {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin-top: 14px;
+      border-radius: 10px;
+      border: none;
+      background: #111;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: bold;
+      box-sizing: border-box;
+    }
+
+    .secondary {
+      background: #eee;
+      color: #111;
+      border: 1px solid #ddd;
+    }
+
+    .danger {
+      background: #b00020;
+    }
+
+    .statBox {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 12px;
+      margin-top: 15px;
+    }
+
+    .statBox p {
+      margin: 10px 0;
+      font-size: 16px;
+    }
+
+    .note {
+      font-size: 13px;
+      color: #777;
+      text-align: center;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+    <div class="brand">ENVISIONED MARKETING</div>
+
+    <h1>Employee Dashboard</h1>
+
+    <p id="welcomeText" style="text-align:center;">Loading...</p>
+
+    <div class="statBox">
+      <p><strong>Your Employee ID:</strong></p>
+      <input id="employeeId" readonly />
+
+      <p><strong>Your Personal QR Link:</strong></p>
+      <input id="qrLink" readonly />
+
+      <button onclick="copyQRLink()">Copy My QR Link</button>
+      <a id="openQRLink" target="_blank">Open My Review Page</a>
+    </div>
+
+    <div class="statBox">
+      <p><strong>QR Scans:</strong> <span id="scanCount">0</span></p>
+      <p><strong>Reviews Copied:</strong> <span id="copyCount">0</span></p>
+      <p><strong>Google Review Button Clicks:</strong> <span id="clickCount">0</span></p>
+    </div>
+
+    <button onclick="refreshStats()">Refresh Stats</button>
+    <button class="danger" onclick="logout()">Logout</button>
+
+    <p class="note">
+      Your QR link tracks scans, copied reviews, and Google review button clicks under your account.
+    </p>
+  </div>
+
+  <!-- FIREBASE SDK -->
+  <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+    // 🔥 REPLACE THIS WITH YOUR FIREBASE CONFIG
+    const firebaseConfig = {
+      apiKey: "PASTE_API_KEY_HERE",
+      authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
+      projectId: "PASTE_PROJECT_ID",
+      storageBucket: "PASTE_PROJECT_ID.appspot.com",
+      messagingSenderId: "PASTE_SENDER_ID",
+      appId: "PASTE_APP_ID"
+    };
+
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      currentUser = user;
+
+      document.getElementById("welcomeText").innerText =
+        "Welcome, " + (user.email || "Employee");
+
+      document.getElementById("employeeId").value = user.uid;
+
+      const baseUrl = window.location.origin + window.location.pathname.replace("employee.html", "");
+
+      const qrLink = baseUrl + "index.html?employee=" + user.uid;
+
+      document.getElementById("qrLink").value = qrLink;
+      document.getElementById("openQRLink").href = qrLink;
+
+      await createEmployeeIfMissing(user);
+      await refreshStats();
+    });
+
+
+    async function createEmployeeIfMissing(user) {
+      const employeeRef = doc(db, "employees", user.uid);
+      const employeeSnap = await getDoc(employeeRef);
+
+      if (!employeeSnap.exists()) {
+        await setDoc(employeeRef, {
+          email: user.email,
+          uid: user.uid,
+          scans: 0,
+          copiedReviews: 0,
+          reviewClicks: 0,
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+
+
+    window.refreshStats = async function () {
+      if (!currentUser) return;
+
+      const employeeRef = doc(db, "employees", currentUser.uid);
+      const employeeSnap = await getDoc(employeeRef);
+
+      if (employeeSnap.exists()) {
+        const data = employeeSnap.data();
+
+        document.getElementById("scanCount").innerText = data.scans || 0;
+        document.getElementById("copyCount").innerText = data.copiedReviews || 0;
+        document.getElementById("clickCount").innerText = data.reviewClicks || 0;
+      }
+    };
+
+
+    window.copyQRLink = function () {
+      const qrInput = document.getElementById("qrLink");
+      qrInput.select();
+      qrInput.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(qrInput.value);
+      alert("QR link copied!");
+    };
+
+
+    window.logout = async function () {
+      await signOut(auth);
+      window.location.href = "login.html";
+    };
+
+  </script>
+
+</body>
+</html>
