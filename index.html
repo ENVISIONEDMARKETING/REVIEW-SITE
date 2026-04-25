@@ -63,9 +63,24 @@
     const employeeId = params.get("employee");
 
     const businesses = [
-      { name: "Business One", link: "PASTE GOOGLE REVIEW LINK HERE" },
-      { name: "Business Two", link: "PASTE GOOGLE REVIEW LINK HERE" },
-      { name: "Business Three", link: "PASTE GOOGLE REVIEW LINK HERE" }
+      {
+        name: "Business One",
+        industry: "restaurant",
+        serviceType: "food and customer service",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      },
+      {
+        name: "Business Two",
+        industry: "auto repair",
+        serviceType: "vehicle repair and customer service",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      },
+      {
+        name: "Business Three",
+        industry: "cleaning company",
+        serviceType: "cleaning service",
+        link: "PASTE GOOGLE REVIEW LINK HERE"
+      }
     ];
 
     let currentBusiness = null;
@@ -79,7 +94,8 @@
 
       try {
         await setDoc(doc(db, "employees", employeeId), {
-          [field]: increment(1)
+          [field]: increment(1),
+          lastActivity: new Date().toISOString()
         }, { merge: true });
       } catch (e) {
         console.log("Tracking error:", e.message);
@@ -108,49 +124,292 @@
       await trackScan();
     }
 
-    const openings = [
-      "I had a great experience with",
-      "I really enjoyed my visit to",
-      "I had an amazing experience at",
-      "I’m very satisfied with",
-      "My experience with",
-      "I recently visited",
-      "I was really impressed with",
-      "From start to finish, my experience with"
-    ];
+    const reviewStyles = {
+      restaurant: {
+        openings: [
+          "I had a really good experience at",
+          "I enjoyed my visit to",
+          "I had a great time at",
+          "My visit to",
+          "I recently stopped by",
+          "I was really impressed with",
+          "I had a smooth experience at",
+          "I’m glad I chose",
+          "I had a positive experience at",
+          "From start to finish, I enjoyed",
+          "This was my first time visiting",
+          "I decided to try",
+          "I had been wanting to check out",
+          "I’m happy I stopped by",
+          "I had a pleasant visit to",
+          "I really liked the experience at",
+          "I had a nice time at",
+          "I was pleasantly surprised by",
+          "I finally got a chance to visit",
+          "I had a solid experience at"
+        ],
+        details: [
+          "the food was fresh, the service was friendly, and the atmosphere felt welcoming",
+          "the staff was helpful, the food came out great, and everything felt clean and comfortable",
+          "the service was smooth, the food was good, and the overall experience was enjoyable",
+          "the team was welcoming, the food tasted great, and I felt taken care of",
+          "everything was handled well, and the staff made the visit easy",
+          "the environment was clean, the service was quick, and the food was enjoyable",
+          "the staff was kind, the service was fast, and the experience felt relaxed",
+          "the food quality was great, and the customer service made the visit even better",
+          "the team was professional, friendly, and made sure everything went smoothly",
+          "the overall experience was comfortable, enjoyable, and worth coming back for",
+          "the order was handled correctly, the staff was respectful, and the food was satisfying",
+          "the menu had good options, the service felt attentive, and the visit was easygoing",
+          "the place had a nice feel, the team was friendly, and the food matched my expectations",
+          "the service felt genuine, the food was prepared well, and the visit felt worth it",
+          "the staff kept things moving, the food was enjoyable, and the space felt inviting",
+          "the team was patient, the service was consistent, and the food tasted fresh",
+          "the experience felt organized, the staff communicated well, and the food was enjoyable",
+          "the atmosphere was comfortable, the staff was welcoming, and the meal was satisfying",
+          "the food came out well, the staff was helpful, and the overall visit was smooth",
+          "the service was friendly without feeling rushed, and the food made the visit worthwhile"
+        ],
+        endings: [
+          "I would definitely come back again.",
+          "I’d recommend this spot to anyone looking for a good experience.",
+          "Overall, I’m glad I came here.",
+          "Definitely worth checking out.",
+          "I’ll be returning again.",
+          "Great experience overall.",
+          "I would gladly recommend them.",
+          "This place is definitely worth visiting.",
+          "I appreciate the great service.",
+          "I had a very positive experience.",
+          "I can see myself coming back.",
+          "I’d tell others to give them a try.",
+          "It was a good choice for sure.",
+          "I left happy with the experience.",
+          "I’d be comfortable recommending this place.",
+          "I’ll keep them in mind next time.",
+          "It was a smooth and enjoyable visit.",
+          "I’m glad I gave them a try.",
+          "The experience was worth the visit.",
+          "I’d come back without hesitation."
+        ]
+      },
 
-    const serviceWords = [
-      "service was excellent",
-      "staff was very professional",
-      "team was extremely helpful",
-      "customer service was top tier",
-      "experience was smooth and easy",
-      "staff was friendly and welcoming",
-      "communication was clear"
-    ];
+      "auto repair": {
+        openings: [
+          "I had a great experience with",
+          "I’m glad I brought my vehicle to",
+          "My experience with",
+          "I recently used",
+          "I was really impressed with",
+          "I had a smooth experience with",
+          "I’m very satisfied with",
+          "I appreciated the service from",
+          "I had a positive experience with",
+          "From start to finish, my experience with",
+          "I brought my car to",
+          "I needed help with my vehicle and chose",
+          "I decided to try",
+          "I’m happy I went with",
+          "I had been looking for a reliable shop and found",
+          "I trusted",
+          "I had my vehicle serviced at",
+          "I reached out to",
+          "I stopped by",
+          "I had an issue with my car and went to"
+        ],
+        details: [
+          "the team was professional, explained everything clearly, and made the process easy",
+          "the service was reliable, communication was clear, and they handled everything well",
+          "they were helpful, honest, and made sure I understood what was going on",
+          "the staff was professional, the work was handled smoothly, and I felt confident in the service",
+          "the process was simple, the communication was good, and the service felt dependable",
+          "they took care of everything quickly and made the experience stress-free",
+          "the team was respectful, knowledgeable, and easy to work with",
+          "everything was handled with care, and I appreciated the clear communication",
+          "the staff helped me understand the service and made the process smooth",
+          "the overall experience was professional, easy, and reliable",
+          "they explained the issue clearly, gave helpful guidance, and treated me fairly",
+          "the service felt honest, the timing was reasonable, and the staff was easy to talk to",
+          "the team kept me updated, handled the work professionally, and made me feel comfortable",
+          "the repair process was straightforward, and I appreciated how clearly everything was explained",
+          "they were organized, respectful, and handled the vehicle with care",
+          "the staff took time to answer questions, and the service felt trustworthy",
+          "the work was completed smoothly, and the communication made the whole experience easier",
+          "they made the repair experience less stressful than I expected",
+          "the staff was patient, helpful, and clear about what needed to be done",
+          "the service felt dependable, and I appreciated the professionalism throughout"
+        ],
+        endings: [
+          "I would definitely use them again.",
+          "I’d recommend them to anyone needing reliable service.",
+          "Great experience overall.",
+          "I appreciate the professional service.",
+          "I’m glad I chose them.",
+          "Definitely a place I would return to.",
+          "I would gladly recommend this business.",
+          "They made the whole process easy.",
+          "Very satisfied with the service.",
+          "I had a positive experience from start to finish.",
+          "I’d trust them with my vehicle again.",
+          "I left feeling confident about the service.",
+          "They earned my recommendation.",
+          "I’ll keep them in mind for future repairs.",
+          "The experience was straightforward and professional.",
+          "I’m happy with how everything turned out.",
+          "I would send friends or family here.",
+          "They made a stressful situation easier.",
+          "I appreciate how they handled everything.",
+          "I’d return if I need service again."
+        ]
+      },
 
-    const positives = [
-      "everything was handled perfectly",
-      "they took great care of me",
-      "the process was fast and simple",
-      "I felt valued as a customer",
-      "they exceeded my expectations",
-      "everything was organized and efficient"
-    ];
+      "cleaning company": {
+        openings: [
+          "I had a great experience with",
+          "I was really happy with the service from",
+          "My experience with",
+          "I recently used",
+          "I’m very satisfied with",
+          "I was impressed with",
+          "I appreciated the work from",
+          "I had a smooth experience with",
+          "From start to finish, the service from",
+          "I’m glad I chose",
+          "I booked a cleaning with",
+          "I needed cleaning help and went with",
+          "I decided to try",
+          "I had been looking for a dependable cleaning company and found",
+          "I was pleased with",
+          "I trusted",
+          "I scheduled service with",
+          "I gave",
+          "I reached out to",
+          "I had my space cleaned by"
+        ],
+        details: [
+          "the team was professional, detailed, and left everything looking fresh",
+          "the service was thorough, the team was friendly, and the results were excellent",
+          "everything was handled with care, and the space looked much better afterward",
+          "they were on time, professional, and paid attention to the details",
+          "the team worked efficiently and made everything feel clean and refreshed",
+          "the service was smooth, reliable, and handled with care",
+          "they did a great job and made the whole process easy",
+          "the results were noticeable, and the team was friendly and respectful",
+          "everything looked organized, clean, and well taken care of",
+          "the team was dependable, professional, and easy to work with",
+          "they paid attention to areas that really needed care, and the results showed",
+          "the communication was clear, the team arrived ready, and the service felt professional",
+          "the space felt refreshed, and the team handled everything respectfully",
+          "they were efficient without rushing, and the quality of the work stood out",
+          "the cleaning was detailed, the team was polite, and the whole process was simple",
+          "they made the space feel much better, and I appreciated the care they put into it",
+          "the service was consistent, organized, and easy to schedule",
+          "they handled the job thoroughly and left a noticeable difference",
+          "the team respected the space and made sure everything looked clean before leaving",
+          "the work felt careful, complete, and professionally done"
+        ],
+        endings: [
+          "I would definitely recommend them.",
+          "I’d gladly use them again.",
+          "Great service from start to finish.",
+          "Very happy with the results.",
+          "I appreciate the care they put into the work.",
+          "I would book them again.",
+          "Definitely worth it.",
+          "I had a very positive experience.",
+          "The results were excellent.",
+          "I’m glad I chose them.",
+          "I would trust them again for future cleaning.",
+          "The difference was easy to notice.",
+          "I was happy with how fresh everything felt.",
+          "I’d recommend them to anyone needing cleaning help.",
+          "They made the whole process easy.",
+          "I’m satisfied with the service.",
+          "I would call them again.",
+          "The work was worth it.",
+          "They did a professional job.",
+          "I appreciated the quality and attention to detail."
+        ]
+      },
 
-    const endings = [
-      "I would definitely recommend them.",
-      "I’ll definitely be coming back.",
-      "Highly recommend to anyone.",
-      "I’d gladly use them again.",
-      "Great experience overall.",
-      "Definitely worth it."
-    ];
+      default: {
+        openings: [
+          "I had a great experience with",
+          "I really appreciated the service from",
+          "My experience with",
+          "I recently worked with",
+          "I was very satisfied with",
+          "I had a smooth experience with",
+          "I was impressed by",
+          "I’m glad I chose",
+          "From start to finish, my experience with",
+          "I had a positive experience with",
+          "I decided to try",
+          "I reached out to",
+          "I recently used",
+          "I was happy with",
+          "I had a helpful experience with",
+          "I trusted",
+          "I had the chance to work with",
+          "I was pleased with",
+          "I appreciated working with",
+          "I had a solid experience with"
+        ],
+        details: [
+          "the team was professional, helpful, and made everything easy",
+          "the service was smooth, the staff was friendly, and everything was handled well",
+          "they were easy to work with, professional, and made the process simple",
+          "the experience was positive from start to finish",
+          "everything was organized, clear, and handled with care",
+          "the staff was welcoming, helpful, and easy to communicate with",
+          "the service was reliable, professional, and smooth",
+          "the team made sure everything was taken care of properly",
+          "they paid attention to detail and provided a great experience",
+          "the whole process felt simple, professional, and stress-free",
+          "the communication was clear, and the team made the experience easy",
+          "the service felt dependable, and everything was handled respectfully",
+          "the staff was patient, professional, and helpful throughout the process",
+          "everything moved smoothly, and I felt comfortable with the service",
+          "the team was responsive, organized, and easy to work with",
+          "they handled everything in a timely and professional way",
+          "the experience felt personal, helpful, and well managed",
+          "they made sure I understood everything and felt taken care of",
+          "the overall process was efficient, friendly, and professional",
+          "the service felt thoughtful, reliable, and easy to recommend"
+        ],
+        endings: [
+          "I would definitely recommend them.",
+          "I’d gladly use them again.",
+          "Great experience overall.",
+          "I appreciate the great service.",
+          "I’m glad I chose them.",
+          "Definitely worth it.",
+          "I had a very positive experience.",
+          "I would recommend this business to others.",
+          "Everything went smoothly.",
+          "Very satisfied with the experience.",
+          "I would feel comfortable coming back.",
+          "I’d recommend them without hesitation.",
+          "They made the process easy.",
+          "I appreciate how everything was handled.",
+          "I’m happy with the service.",
+          "I would choose them again.",
+          "The experience was professional and smooth.",
+          "I’m glad I gave them a try.",
+          "They did a great job.",
+          "I left with a good impression."
+        ]
+      }
+    };
 
     window.generateReview = function () {
       if (!currentBusiness) return;
 
-      const review = `${random(openings)} ${currentBusiness.name}. Their ${random(serviceWords)} and ${random(positives)}. ${random(endings)}`;
+      const industry = currentBusiness.industry || "default";
+      const style = reviewStyles[industry] || reviewStyles.default;
+
+      const review = `${random(style.openings)} ${currentBusiness.name}. ${random(style.details)}. ${random(style.endings)}`;
+
       document.getElementById("reviewText").value = review;
     };
 
