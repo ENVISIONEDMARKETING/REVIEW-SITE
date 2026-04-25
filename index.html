@@ -5,73 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 25px;
-      max-width: 500px;
-      margin: auto;
-      background: #f7f7f7;
-      color: #111;
-    }
-
-    .company-name {
-      text-align: center;
-      font-size: 15px;
-      font-weight: bold;
-      letter-spacing: 2px;
-      color: #555;
-      text-transform: uppercase;
-      margin-top: 10px;
-    }
-
-    .card {
-      background: white;
-      padding: 24px;
-      margin-top: 18px;
-      border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-    }
-
-    h1 {
-      font-size: 26px;
-      text-align: center;
-      margin-top: 0;
-    }
-
-    textarea {
-      width: 100%;
-      height: 155px;
-      font-size: 16px;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-    }
-
-    button, a {
-      display: block;
-      width: 100%;
-      padding: 15px;
-      margin-top: 15px;
-      color: white;
-      text-align: center;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: bold;
-      text-decoration: none;
-      box-sizing: border-box;
-    }
-
+    body { font-family: Arial, sans-serif; padding: 25px; max-width: 500px; margin: auto; background: #f7f7f7; color: #111; }
+    .company-name { text-align: center; font-size: 15px; font-weight: bold; letter-spacing: 2px; color: #555; text-transform: uppercase; margin-top: 10px; }
+    .card { background: white; padding: 24px; margin-top: 18px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    h1 { font-size: 26px; text-align: center; margin-top: 0; }
+    textarea { width: 100%; height: 155px; font-size: 16px; padding: 12px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; }
+    button, a { display: block; width: 100%; padding: 15px; margin-top: 15px; color: white; text-align: center; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; }
     .green-btn { background: #1db954; }
     .blue-btn { background: #0b57d0; }
-
-    .note {
-      font-size: 14px;
-      color: #555;
-      margin-top: 14px;
-      text-align: center;
-    }
+    .note { font-size: 14px; color: #555; margin-top: 14px; text-align: center; }
   </style>
 </head>
 
@@ -87,21 +29,23 @@
     <textarea id="reviewText"></textarea>
 
     <button class="green-btn" onclick="generateReview()">Generate New Review</button>
-
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" class="green-btn" target="_blank" onclick="trackClick()">
+    <a id="googleReviewLink" class="green-btn" href="#" onclick="trackClick(event)">
       Open Google Review Page
     </a>
 
-    <p class="note">
-      Please only leave an honest review based on your real experience.
-    </p>
+    <p class="note">Please only leave an honest review based on your real experience.</p>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      increment
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
@@ -119,7 +63,7 @@
     const employeeId = params.get("employee");
 
     const businesses = [
-      { name: "NY BARBER SHOP", link: "https://www.google.com/search?client=safari&hs=8nlp&sca_esv=c229c07e005af370&hl=en-us&cs=0&output=search&kgmid=%2Fg%2F1tgp1mmh&q=NY%20BarberShop&shem=rimspwouoe&shndl=30&source=sh%2Fx%2Floc%2Fact%2Fm4%2F3" },
+      { name: "Business One", link: "PASTE GOOGLE REVIEW LINK HERE" },
       { name: "Business Two", link: "PASTE GOOGLE REVIEW LINK HERE" },
       { name: "Business Three", link: "PASTE GOOGLE REVIEW LINK HERE" }
     ];
@@ -134,15 +78,25 @@
       if (!employeeId) return;
 
       try {
-        await updateDoc(doc(db, "employees", employeeId), {
+        await setDoc(doc(db, "employees", employeeId), {
           [field]: increment(1)
-        });
+        }, { merge: true });
       } catch (e) {
         console.log("Tracking error:", e.message);
       }
     }
 
-    // 🔥 FIXED: NOW COUNTS EVERY SCAN RELIABLY
+    async function trackScan() {
+      await updateStat("scans");
+
+      const uniqueKey = "uniqueScan_" + employeeId;
+
+      if (!localStorage.getItem(uniqueKey)) {
+        await updateStat("uniqueScans");
+        localStorage.setItem(uniqueKey, "true");
+      }
+    }
+
     async function pickRandomBusiness() {
       currentBusiness = random(businesses);
 
@@ -151,8 +105,7 @@
 
       generateReview();
 
-      // 👇 THIS NOW WAITS (IMPORTANT)
-      await updateStat("scans");
+      await trackScan();
     }
 
     const openings = [
@@ -161,7 +114,9 @@
       "I had an amazing experience at",
       "I’m very satisfied with",
       "My experience with",
-      "I recently visited"
+      "I recently visited",
+      "I was really impressed with",
+      "From start to finish, my experience with"
     ];
 
     const serviceWords = [
@@ -170,7 +125,8 @@
       "team was extremely helpful",
       "customer service was top tier",
       "experience was smooth and easy",
-      "staff was friendly and welcoming"
+      "staff was friendly and welcoming",
+      "communication was clear"
     ];
 
     const positives = [
@@ -218,11 +174,16 @@
       }
     };
 
-    window.trackClick = async function () {
+    window.trackClick = async function (event) {
+      event.preventDefault();
+
+      const link = document.getElementById("googleReviewLink").href;
+
       await updateStat("reviewClicks");
+
+      window.open(link, "_blank");
     };
 
-    // 🔥 RUN ON PAGE LOAD (QR SCAN)
     pickRandomBusiness();
   </script>
 
