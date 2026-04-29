@@ -31,7 +31,7 @@
     <button class="green-btn" onclick="generateReview()">Generate New Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" class="green-btn" href="#" onclick="openGoogleReview(event)">
+    <a id="googleReviewLink" class="green-btn" href="#" target="_blank" rel="noopener noreferrer">
       Open Google Review Page
     </a>
 
@@ -76,13 +76,11 @@
     }
 
     function getTodayDate() {
-      const now = new Date();
-      return now.toISOString().split("T")[0];
+      return new Date().toISOString().split("T")[0];
     }
 
     function getMonthKey() {
-      const now = new Date();
-      return now.toISOString().slice(0, 7);
+      return new Date().toISOString().slice(0, 7);
     }
 
     function getWeekKey() {
@@ -116,7 +114,6 @@
           "I appreciate the care they put into their work."
         ]
       },
-
       default: {
         openings: [
           "I had a great experience with",
@@ -277,20 +274,22 @@
       }
     }
 
-    async function openGoogleReview(event) {
-      event.preventDefault();
-
+    async function trackGoogleReviewClick() {
       if (!currentBusiness || !currentBusiness.reviewLink) return;
 
       await updateStat("reviewClicks");
       await logActivity("googleClick");
-
-      window.open(currentBusiness.reviewLink, "_blank");
     }
 
     function startReviewPage() {
       document.getElementById("businessName").innerText = currentBusiness.name;
-      document.getElementById("googleReviewLink").href = currentBusiness.reviewLink;
+
+      const reviewBtn = document.getElementById("googleReviewLink");
+      reviewBtn.href = currentBusiness.reviewLink;
+
+      reviewBtn.addEventListener("click", function () {
+        trackGoogleReviewClick();
+      });
 
       generateReview();
       trackScan();
