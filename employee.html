@@ -68,7 +68,7 @@
     <button class="danger" onclick="logout()">Logout</button>
 
     <p class="note">
-      These stats reset by day, week, and month based on customer activity from your QR link.
+      These stats reset automatically by day, week, and month.
     </p>
   </div>
 
@@ -83,13 +83,13 @@
       projectId: "envisionedmktng",
       storageBucket: "envisionedmktng.firebasestorage.app",
       messagingSenderId: "1075132261537",
-      appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
-      measurementId: "G-8XY38GQQ86"
+      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
+
     let currentUser = null;
 
     function getTodayDate() {
@@ -132,11 +132,11 @@
     });
 
     async function createEmployeeIfMissing(user) {
-      const employeeRef = db.collection("employees").doc(user.uid);
-      const employeeSnap = await employeeRef.get();
+      const ref = db.collection("employees").doc(user.uid);
+      const snap = await ref.get();
 
-      if (!employeeSnap.exists) {
-        await employeeRef.set({
+      if (!snap.exists) {
+        await ref.set({
           email: user.email,
           uid: user.uid,
           createdAt: new Date().toISOString()
@@ -150,7 +150,7 @@
 
     function countLog(stats, type) {
       if (type === "scan") stats.scans++;
-      if (type === "copy") stats.copies++;
+      if (type === "copy" || type === "copiedReview") stats.copies++;
       if (type === "googleClick") stats.clicks++;
     }
 
@@ -169,8 +169,8 @@
         .where("employeeId", "==", currentUser.uid)
         .get();
 
-      snapshot.forEach(function(docSnap) {
-        const data = docSnap.data();
+      snapshot.forEach(doc => {
+        const data = doc.data();
 
         if (data.date === todayKey) countLog(today, data.type);
         if (data.week === weekKey) countLog(week, data.type);
@@ -193,7 +193,6 @@
     function copyQRLink() {
       const input = document.getElementById("qrLink");
       input.select();
-      input.setSelectionRange(0, 99999);
       navigator.clipboard.writeText(input.value);
       alert("QR link copied!");
     }
@@ -202,10 +201,6 @@
       await auth.signOut();
       window.location.href = "login.html";
     }
-
-    window.refreshStats = refreshStats;
-    window.copyQRLink = copyQRLink;
-    window.logout = logout;
   </script>
 </body>
 </html>
