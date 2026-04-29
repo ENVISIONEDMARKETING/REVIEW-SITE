@@ -5,90 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b0b0b;
-      color: #111;
-      padding: 20px;
-    }
-
-    .box {
-      max-width: 620px;
-      margin: 30px auto;
-      background: white;
-      padding: 25px;
-      border-radius: 18px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.35);
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 5px;
-    }
-
-    .brand {
-      text-align: center;
-      font-size: 13px;
-      letter-spacing: 2px;
-      font-weight: bold;
-      color: #777;
-      margin-bottom: 20px;
-    }
-
-    input {
-      width: 100%;
-      padding: 14px;
-      margin-top: 10px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-
-    button, a {
-      display: block;
-      width: 100%;
-      padding: 15px;
-      margin-top: 14px;
-      border-radius: 10px;
-      border: none;
-      background: #111;
-      color: white;
-      text-align: center;
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: bold;
-      box-sizing: border-box;
-    }
-
-    .danger {
-      background: #b00020;
-    }
-
-    .statBox {
-      background: #f4f4f4;
-      padding: 15px;
-      border-radius: 12px;
-      margin-top: 15px;
-    }
-
-    .note {
-      font-size: 13px;
-      color: #777;
-      text-align: center;
-      margin-top: 15px;
-    }
+    body { margin:0; font-family:Arial,sans-serif; background:#0b0b0b; color:#111; padding:20px; }
+    .box { max-width:620px; margin:30px auto; background:white; padding:25px; border-radius:18px; box-shadow:0 20px 50px rgba(0,0,0,0.35); }
+    h1 { text-align:center; margin-bottom:5px; }
+    .brand { text-align:center; font-size:13px; letter-spacing:2px; font-weight:bold; color:#777; margin-bottom:20px; }
+    input { width:100%; padding:14px; margin-top:10px; border-radius:10px; border:1px solid #ccc; font-size:14px; box-sizing:border-box; }
+    button, a { display:block; width:100%; padding:15px; margin-top:14px; border-radius:10px; border:none; background:#111; color:white; text-align:center; text-decoration:none; font-size:16px; font-weight:bold; box-sizing:border-box; }
+    .danger { background:#b00020; }
+    .statBox { background:#f4f4f4; padding:15px; border-radius:12px; margin-top:15px; }
+    .statGrid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; }
+    .statCard { background:white; padding:12px; border-radius:10px; text-align:center; }
+    .statCard strong { display:block; font-size:22px; margin-top:6px; }
+    .note { font-size:13px; color:#777; text-align:center; margin-top:15px; }
   </style>
 </head>
 
 <body>
-
   <div class="box">
     <div class="brand">ENVISIONED MARKETING</div>
-
     <h1>Employee Dashboard</h1>
-
     <p id="welcomeText" style="text-align:center;">Loading...</p>
 
     <div class="statBox">
@@ -103,17 +38,37 @@
     </div>
 
     <div class="statBox">
-      <p><strong>Total QR Scans:</strong> <span id="scanCount">0</span></p>
-      <p><strong>Total Unique Scans:</strong> <span id="uniqueCount">0</span></p>
-      <p><strong>Total Reviews Copied:</strong> <span id="copyCount">0</span></p>
-      <p><strong>Total Google Review Clicks:</strong> <span id="clickCount">0</span></p>
+      <h2>Today</h2>
+      <div class="statGrid">
+        <div class="statCard">Scans <strong id="todayScans">0</strong></div>
+        <div class="statCard">Copies <strong id="todayCopies">0</strong></div>
+        <div class="statCard">Google Clicks <strong id="todayClicks">0</strong></div>
+      </div>
+    </div>
+
+    <div class="statBox">
+      <h2>This Week</h2>
+      <div class="statGrid">
+        <div class="statCard">Scans <strong id="weekScans">0</strong></div>
+        <div class="statCard">Copies <strong id="weekCopies">0</strong></div>
+        <div class="statCard">Google Clicks <strong id="weekClicks">0</strong></div>
+      </div>
+    </div>
+
+    <div class="statBox">
+      <h2>This Month</h2>
+      <div class="statGrid">
+        <div class="statCard">Scans <strong id="monthScans">0</strong></div>
+        <div class="statCard">Copies <strong id="monthCopies">0</strong></div>
+        <div class="statCard">Google Clicks <strong id="monthClicks">0</strong></div>
+      </div>
     </div>
 
     <button onclick="refreshStats()">Refresh Stats</button>
     <button class="danger" onclick="logout()">Logout</button>
 
     <p class="note">
-      This one QR link will randomly show one of the saved businesses and track results under your account.
+      These stats reset by day, week, and month based on customer activity from your QR link.
     </p>
   </div>
 
@@ -133,11 +88,25 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-
     const auth = firebase.auth();
     const db = firebase.firestore();
-
     let currentUser = null;
+
+    function getTodayDate() {
+      return new Date().toISOString().split("T")[0];
+    }
+
+    function getMonthKey() {
+      return new Date().toISOString().slice(0, 7);
+    }
+
+    function getWeekKey() {
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), 0, 1);
+      const pastDays = Math.floor((now - firstDay) / 86400000);
+      const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+      return now.getFullYear() + "-W" + weekNumber;
+    }
 
     auth.onAuthStateChanged(async function(user) {
       if (!user) {
@@ -153,11 +122,7 @@
       document.getElementById("employeeId").value = user.uid;
 
       const baseUrl = window.location.origin + window.location.pathname.replace("employee.html", "");
-
-      const qrLink =
-        baseUrl +
-        "index.html?employee=" +
-        encodeURIComponent(user.uid);
+      const qrLink = baseUrl + "index.html?employee=" + encodeURIComponent(user.uid);
 
       document.getElementById("qrLink").value = qrLink;
       document.getElementById("openQRLink").href = qrLink;
@@ -179,31 +144,50 @@
       }
     }
 
+    function emptyStats() {
+      return { scans:0, copies:0, clicks:0 };
+    }
+
+    function countLog(stats, type) {
+      if (type === "scan") stats.scans++;
+      if (type === "copy") stats.copies++;
+      if (type === "googleClick") stats.clicks++;
+    }
+
     async function refreshStats() {
       if (!currentUser) return;
 
-      const snapshot = await db.collection("stats").get();
+      const todayKey = getTodayDate();
+      const weekKey = getWeekKey();
+      const monthKey = getMonthKey();
 
-      let scans = 0;
-      let uniqueScans = 0;
-      let copiedReviews = 0;
-      let reviewClicks = 0;
+      const today = emptyStats();
+      const week = emptyStats();
+      const month = emptyStats();
+
+      const snapshot = await db.collection("activityLogs")
+        .where("employeeId", "==", currentUser.uid)
+        .get();
 
       snapshot.forEach(function(docSnap) {
         const data = docSnap.data();
 
-        if (data.employeeId === currentUser.uid) {
-          scans += data.scans || 0;
-          uniqueScans += data.uniqueScans || 0;
-          copiedReviews += data.copiedReviews || 0;
-          reviewClicks += data.reviewClicks || 0;
-        }
+        if (data.date === todayKey) countLog(today, data.type);
+        if (data.week === weekKey) countLog(week, data.type);
+        if (data.month === monthKey) countLog(month, data.type);
       });
 
-      document.getElementById("scanCount").innerText = scans;
-      document.getElementById("uniqueCount").innerText = uniqueScans;
-      document.getElementById("copyCount").innerText = copiedReviews;
-      document.getElementById("clickCount").innerText = reviewClicks;
+      document.getElementById("todayScans").innerText = today.scans;
+      document.getElementById("todayCopies").innerText = today.copies;
+      document.getElementById("todayClicks").innerText = today.clicks;
+
+      document.getElementById("weekScans").innerText = week.scans;
+      document.getElementById("weekCopies").innerText = week.copies;
+      document.getElementById("weekClicks").innerText = week.clicks;
+
+      document.getElementById("monthScans").innerText = month.scans;
+      document.getElementById("monthCopies").innerText = month.copies;
+      document.getElementById("monthClicks").innerText = month.clicks;
     }
 
     function copyQRLink() {
@@ -223,6 +207,5 @@
     window.copyQRLink = copyQRLink;
     window.logout = logout;
   </script>
-
 </body>
 </html>
