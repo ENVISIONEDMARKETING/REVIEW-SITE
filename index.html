@@ -5,108 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    :root {
-      --green: #19b85b;
-      --blue: #0b57d0;
-      --dark: #101114;
-      --muted: #666;
-      --bg: #f5f5f6;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      padding: 24px;
-      max-width: 520px;
-      margin: auto;
-      background: var(--bg);
-      color: var(--dark);
-    }
-
-    .brand {
-      text-align: center;
-      font-size: 13px;
-      letter-spacing: 3px;
-      font-weight: 800;
-      color: #777;
-      margin: 12px 0 18px;
-      text-transform: uppercase;
-    }
-
-    .card {
-      background: #fff;
-      padding: 26px;
-      border-radius: 24px;
-      box-shadow: 0 18px 45px rgba(0,0,0,.10);
-    }
-
-    h1 {
-      font-size: 30px;
-      text-align: center;
-      margin: 0 0 18px;
-      line-height: 1.1;
-    }
-
-    p {
-      font-size: 16px;
-      line-height: 1.45;
-    }
-
-    textarea {
-      width: 100%;
-      height: 170px;
-      font-size: 16px;
-      padding: 14px;
-      border-radius: 14px;
-      border: 1px solid #ccc;
-      resize: none;
-    }
-
-    button, a {
-      display: block;
-      width: 100%;
-      padding: 16px;
-      margin-top: 15px;
-      color: white;
-      text-align: center;
-      border: 0;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: 800;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .green {
-      background: var(--green);
-    }
-
-    .blue {
-      background: var(--blue);
-    }
-
-    .note {
-      color: var(--muted);
-      text-align: center;
-      font-size: 14px;
-      margin-top: 16px;
-    }
-
-    .small {
-      font-size: 13px;
-      color: #777;
-      text-align: center;
-      margin-top: 10px;
-    }
+    body { font-family: Arial, sans-serif; padding: 25px; max-width: 500px; margin: auto; background: #f7f7f7; color: #111; }
+    .company-name { text-align: center; font-size: 15px; font-weight: bold; letter-spacing: 2px; color: #555; text-transform: uppercase; margin-top: 10px; }
+    .card { background: white; padding: 24px; margin-top: 18px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    h1 { font-size: 26px; text-align: center; margin-top: 0; }
+    textarea { width: 100%; height: 155px; font-size: 16px; padding: 12px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; }
+    button, a { display: block; width: 100%; padding: 15px; margin-top: 15px; color: white; text-align: center; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; }
+    .green-btn { background: #1db954; }
+    .blue-btn { background: #0b57d0; }
+    .note { font-size: 14px; color: #555; margin-top: 14px; text-align: center; }
   </style>
 </head>
 
 <body>
 
-  <div class="brand" id="businessName">Loading...</div>
+  <div class="company-name" id="businessName">Loading...</div>
 
   <div class="card">
     <h1>Leave Us a Google Review</h1>
@@ -115,50 +28,50 @@
 
     <textarea id="reviewText" placeholder="Generating review..."></textarea>
 
-    <button class="green" onclick="generateReview()">Generate New Review</button>
-    <button class="blue copy-btn" onclick="copyReview()">Copy Suggested Review</button>
+    <button class="green-btn" onclick="generateReview()">Generate New Review</button>
+    <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" class="green" href="#" onclick="openGoogleReview(event)">
+    <a id="googleReviewLink" class="green-btn" href="#" onclick="openGoogleReview(event)">
       Open Google Review Page
     </a>
 
     <p class="note">Please only leave an honest review based on your real experience.</p>
-    <p class="small" id="employeeTag"></p>
+    <p class="note" id="employeeTag"></p>
   </div>
 
+  <!-- Firebase non-module version: better for GitHub Pages/mobile -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
+      authDomain: "envisionedmktng.firebaseapp.com",
+      projectId: "envisionedmktng",
+      storageBucket: "envisionedmktng.firebasestorage.app",
+      messagingSenderId: "1075132261537",
+      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     const params = new URLSearchParams(window.location.search);
     const employeeId = params.get("employee") || "default";
 
     document.getElementById("employeeTag").innerText = "Tracking ID: " + employeeId;
 
-    const businesses = [
-      {
-        name: "Wholesome House Cleaning of Ocala",
-        industry: "cleaning company",
-        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Ocala+reviews"
-      },
-      {
-        name: "Wholesome House Cleaning of Sarasota",
-        industry: "cleaning company",
-        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Sarasota+reviews"
-      },
-      {
-        name: "Wholesome House Cleaning of Lakewood Ranch",
-        industry: "cleaning company",
-        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Lakewood+Ranch+reviews"
-      },
-      {
-        name: "Wholesome House Cleaning of Bradenton",
-        industry: "cleaning company",
-        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Bradenton+reviews"
-      }
-    ];
-
+    let businesses = [];
     let currentBusiness = null;
 
     function random(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function slugify(text) {
+      return String(text).toLowerCase().trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
     }
 
     const reviewStyles = {
@@ -183,29 +96,77 @@
           "Great service from start to finish.",
           "I appreciate the care they put into their work."
         ]
+      },
+      default: {
+        openings: [
+          "I had a great experience with",
+          "I really appreciated the service from",
+          "My experience with",
+          "I recently worked with"
+        ],
+        details: [
+          "the team was professional, helpful, and made everything easy",
+          "the service was smooth, the staff was friendly, and everything was handled well",
+          "they were easy to work with, professional, and made the process simple"
+        ],
+        endings: [
+          "I would definitely recommend them.",
+          "I’d gladly use them again.",
+          "Great experience overall."
+        ]
       }
     };
 
-    function saveLocalStat(type) {
-      const key = "reviewStats_" + employeeId;
-      const stats = JSON.parse(localStorage.getItem(key)) || {
-        scans: 0,
-        uniqueScans: 0,
-        copiedReviews: 0,
-        reviewClicks: 0
-      };
+    async function loadBusinesses() {
+      try {
+        const snapshot = await db.collection("businesses").get();
 
-      stats[type] = (stats[type] || 0) + 1;
-      localStorage.setItem(key, JSON.stringify(stats));
+        businesses = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(b => b.active !== false && b.reviewLink);
+
+        if (!businesses.length) {
+          document.getElementById("businessName").innerText = "No businesses found";
+          document.getElementById("reviewText").value = "Please add a business inside admin.html first.";
+          return;
+        }
+
+        startReviewPage();
+
+      } catch (error) {
+        document.getElementById("businessName").innerText = "Firebase error";
+        document.getElementById("reviewText").value = error.message;
+      }
     }
 
-    function trackScan() {
-      saveLocalStat("scans");
+    async function updateStat(type) {
+      if (!currentBusiness) return;
 
-      const uniqueKey = "uniqueScan_" + employeeId;
+      const businessId = currentBusiness.id || slugify(currentBusiness.name);
+      const statId = employeeId + "_" + businessId;
+
+      try {
+        await db.collection("stats").doc(statId).set({
+          employeeId: employeeId,
+          businessId: businessId,
+          businessName: currentBusiness.name,
+          industry: currentBusiness.industry || "default",
+          [type]: firebase.firestore.FieldValue.increment(1),
+          lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (error) {
+        console.log("Tracking error:", error.message);
+      }
+    }
+
+    async function trackScan() {
+      await updateStat("scans");
+
+      const businessId = currentBusiness.id || slugify(currentBusiness.name);
+      const uniqueKey = "unique_" + employeeId + "_" + businessId;
 
       if (!localStorage.getItem(uniqueKey)) {
-        saveLocalStat("uniqueScans");
+        await updateStat("uniqueScans");
         localStorage.setItem(uniqueKey, "true");
       }
     }
@@ -213,7 +174,7 @@
     function generateReview() {
       if (!currentBusiness) return;
 
-      const style = reviewStyles[currentBusiness.industry];
+      const style = reviewStyles[currentBusiness.industry] || reviewStyles.default;
 
       const review =
         random(style.openings) + " " +
@@ -224,46 +185,47 @@
       document.getElementById("reviewText").value = review;
     }
 
-    function copyReview() {
+    async function copyReview() {
       const text = document.getElementById("reviewText").value;
 
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(function () {
-          const btn = document.querySelector(".copy-btn");
-          btn.innerText = "Copied ✓";
+      try {
+        await navigator.clipboard.writeText(text);
 
-          setTimeout(function () {
-            btn.innerText = "Copy Suggested Review";
-          }, 1500);
+        const btn = document.querySelector(".copy-btn");
+        btn.innerText = "Copied ✓";
 
-          saveLocalStat("copiedReviews");
-        });
-      } else {
-        alert("Hold down on the review text and copy it manually.");
+        setTimeout(() => {
+          btn.innerText = "Copy Suggested Review";
+        }, 1500);
+
+        await updateStat("copiedReviews");
+
+      } catch (error) {
+        alert("Copy failed. Hold down on the text and copy manually.");
       }
     }
 
-    function openGoogleReview(event) {
+    async function openGoogleReview(event) {
       event.preventDefault();
 
-      if (!currentBusiness || !currentBusiness.link) return;
+      if (!currentBusiness || !currentBusiness.reviewLink) return;
 
-      saveLocalStat("reviewClicks");
+      await updateStat("reviewClicks");
 
-      window.open(currentBusiness.link, "_blank");
+      window.open(currentBusiness.reviewLink, "_blank");
     }
 
-    function start() {
+    function startReviewPage() {
       currentBusiness = random(businesses);
 
       document.getElementById("businessName").innerText = currentBusiness.name;
-      document.getElementById("googleReviewLink").href = currentBusiness.link;
+      document.getElementById("googleReviewLink").href = currentBusiness.reviewLink;
 
       generateReview();
       trackScan();
     }
 
-    start();
+    loadBusinesses();
   </script>
 
 </body>
