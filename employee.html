@@ -73,18 +73,6 @@
       margin-top: 15px;
     }
 
-    .businessCard {
-      background: #fff;
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 12px;
-      margin-top: 15px;
-    }
-
-    .businessCard h3 {
-      margin: 0 0 8px;
-    }
-
     .note {
       font-size: 13px;
       color: #777;
@@ -106,6 +94,12 @@
     <div class="statBox">
       <p><strong>Your Employee ID:</strong></p>
       <input id="employeeId" readonly />
+
+      <p><strong>Your One QR Link:</strong></p>
+      <input id="qrLink" readonly />
+
+      <button onclick="copyQRLink()">Copy My QR Link</button>
+      <a id="openQRLink" target="_blank">Open My Review Page</a>
     </div>
 
     <div class="statBox">
@@ -115,16 +109,11 @@
       <p><strong>Total Google Review Clicks:</strong> <span id="clickCount">0</span></p>
     </div>
 
-    <div class="statBox">
-      <p><strong>Your Business QR Links:</strong></p>
-      <div id="businessLinks">Loading businesses...</div>
-    </div>
-
     <button onclick="refreshStats()">Refresh Stats</button>
     <button class="danger" onclick="logout()">Logout</button>
 
     <p class="note">
-      Each link below is already connected to your employee account and that specific business.
+      This one QR link will randomly show one of the saved businesses and track results under your account.
     </p>
   </div>
 
@@ -176,8 +165,17 @@
 
       document.getElementById("employeeId").value = user.uid;
 
+      const baseUrl = window.location.origin + window.location.pathname.replace("employee.html", "");
+
+      const qrLink =
+        baseUrl +
+        "index.html?employee=" +
+        encodeURIComponent(user.uid);
+
+      document.getElementById("qrLink").value = qrLink;
+      document.getElementById("openQRLink").href = qrLink;
+
       await createEmployeeIfMissing(user);
-      await loadBusinessLinks();
       await refreshStats();
     });
 
@@ -194,52 +192,8 @@
       }
     }
 
-    async function loadBusinessLinks() {
-      const container = document.getElementById("businessLinks");
-      container.innerHTML = "Loading businesses...";
-
-      const baseUrl = window.location.origin + window.location.pathname.replace("employee.html", "");
-
-      const snapshot = await getDocs(collection(db, "businesses"));
-
-      let html = "";
-
-      snapshot.forEach((docSnap) => {
-        const business = docSnap.data();
-
-        if (business.active === false) return;
-
-        const businessId = docSnap.id;
-
-        const reviewLink =
-          baseUrl +
-          "index.html?employee=" +
-          encodeURIComponent(currentUser.uid) +
-          "&business=" +
-          encodeURIComponent(businessId);
-
-        html += `
-          <div class="businessCard">
-            <h3>${business.name || businessId}</h3>
-
-            <input value="${reviewLink}" readonly id="link_${businessId}" />
-
-            <button onclick="copyBusinessLink('${businessId}')">
-              Copy This QR Link
-            </button>
-
-            <a href="${reviewLink}" target="_blank">
-              Open Review Page
-            </a>
-          </div>
-        `;
-      });
-
-      container.innerHTML = html || "No businesses found. Add a business in admin.html first.";
-    }
-
-    window.copyBusinessLink = function (businessId) {
-      const input = document.getElementById("link_" + businessId);
+    window.copyQRLink = function () {
+      const input = document.getElementById("qrLink");
       input.select();
       input.setSelectionRange(0, 99999);
       navigator.clipboard.writeText(input.value);
