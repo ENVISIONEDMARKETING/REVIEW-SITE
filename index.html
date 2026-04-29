@@ -5,42 +5,138 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    body { font-family: Arial, sans-serif; padding: 25px; max-width: 500px; margin: auto; background: #f7f7f7; color: #111; }
-    .company-name { text-align: center; font-size: 15px; font-weight: bold; letter-spacing: 2px; color: #555; text-transform: uppercase; margin-top: 10px; }
-    .card { background: white; padding: 24px; margin-top: 18px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-    h1 { font-size: 26px; text-align: center; margin-top: 0; }
-    textarea { width: 100%; height: 155px; font-size: 16px; padding: 12px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; }
-    button, a { display: block; width: 100%; padding: 15px; margin-top: 15px; color: white; text-align: center; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; }
-    .green-btn { background: #1db954; }
-    .blue-btn { background: #0b57d0; }
-    .note { font-size: 14px; color: #555; margin-top: 14px; text-align: center; }
+    :root {
+      --green: #19b85b;
+      --blue: #0b57d0;
+      --dark: #101114;
+      --muted: #666;
+      --bg: #f5f5f6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      padding: 24px;
+      max-width: 520px;
+      margin: auto;
+      background: var(--bg);
+      color: var(--dark);
+    }
+
+    .brand {
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 3px;
+      font-weight: 800;
+      color: #777;
+      margin: 12px 0 18px;
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: #fff;
+      padding: 26px;
+      border-radius: 24px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.10);
+    }
+
+    h1 {
+      font-size: 30px;
+      text-align: center;
+      margin: 0 0 18px;
+      line-height: 1.1;
+    }
+
+    p {
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    textarea {
+      width: 100%;
+      height: 170px;
+      font-size: 16px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+
+    button, a {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      margin-top: 15px;
+      color: white;
+      text-align: center;
+      border: 0;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .green {
+      background: var(--green);
+    }
+
+    .blue {
+      background: var(--blue);
+    }
+
+    .note {
+      color: var(--muted);
+      text-align: center;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #777;
+      text-align: center;
+      margin-top: 10px;
+    }
   </style>
 </head>
 
 <body>
 
-  <div class="company-name" id="businessName">Loading...</div>
+  <div class="brand" id="businessName">Loading...</div>
 
   <div class="card">
     <h1>Leave Us a Google Review</h1>
 
     <p>Here’s a suggested review. Please edit it so it matches your real experience.</p>
 
-    <textarea id="reviewText"></textarea>
+    <textarea id="reviewText" placeholder="Generating review..."></textarea>
 
-    <button class="green-btn" onclick="generateReview()">Generate New Review</button>
-    <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
+    <button class="green" onclick="generateReview()">Generate New Review</button>
+    <button class="blue copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" class="green-btn" href="#" onclick="trackClick(event)">
+    <a id="googleReviewLink" class="green" href="#" onclick="openGoogleReview(event)">
       Open Google Review Page
     </a>
 
     <p class="note">Please only leave an honest review based on your real experience.</p>
+    <p class="small" id="employeeTag"></p>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      setDoc,
+      increment,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
@@ -57,41 +153,88 @@
     const params = new URLSearchParams(window.location.search);
     const employeeId = params.get("employee") || "default";
 
-    const businesses = [
+    document.getElementById("employeeTag").innerText = "Tracking ID: " + employeeId;
+
+    let businesses = [];
+    let currentBusiness = null;
+
+    const backupBusinesses = [
       {
+        id: "wholesome-ocala",
         name: "Wholesome House Cleaning of Ocala",
         industry: "cleaning company",
-        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Ocala+reviews"
+        reviewLink: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Ocala+reviews"
       },
       {
+        id: "wholesome-sarasota",
         name: "Wholesome House Cleaning of Sarasota",
         industry: "cleaning company",
-        link: "https://share.google/rqniZWtrmm7sigLfW"
+        reviewLink: "https://share.google/rqniZWtrmm7sigLfW"
       },
       {
+        id: "wholesome-lakewood-ranch",
         name: "Wholesome House Cleaning of Lakewood Ranch",
         industry: "cleaning company",
-        link: "https://share.google/c1j5c1WN72qeIOAWC"
+        reviewLink: "https://share.google/c1j5c1WN72qeIOAWC"
       },
       {
+        id: "wholesome-bradenton",
         name: "Wholesome House Cleaning of Bradenton",
         industry: "cleaning company",
-        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Bradenton+reviews"
+        reviewLink: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Bradenton+reviews"
       }
     ];
-
-    let currentBusiness = null;
 
     function random(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    async function updateStat(field) {
+    function slugify(text) {
+      return String(text)
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    }
+
+    async function loadBusinesses() {
       try {
-        await setDoc(doc(db, "employees", employeeId), {
-          [field]: increment(1),
-          lastActivity: new Date().toISOString()
+        const snap = await getDocs(collection(db, "businesses"));
+
+        businesses = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(b => b.active !== false && b.reviewLink);
+
+      } catch (e) {
+        console.log("Could not load businesses:", e.message);
+      }
+
+      if (!businesses.length) {
+        businesses = backupBusinesses;
+      }
+    }
+
+    async function updateStat(type) {
+      if (!currentBusiness) return;
+
+      const businessId = currentBusiness.id || slugify(currentBusiness.name);
+      const statId = `${employeeId}_${businessId}`;
+
+      try {
+        await setDoc(doc(db, "stats", statId), {
+          employeeId: employeeId,
+          businessId: businessId,
+          businessName: currentBusiness.name,
+          industry: currentBusiness.industry || "general",
+          [type]: increment(1),
+          lastActivity: serverTimestamp()
         }, { merge: true });
+
+        await setDoc(doc(db, "employees", employeeId), {
+          employeeId: employeeId,
+          lastActivity: serverTimestamp()
+        }, { merge: true });
+
       } catch (e) {
         console.log("Tracking error:", e.message);
       }
@@ -100,7 +243,8 @@
     async function trackScan() {
       await updateStat("scans");
 
-      const uniqueKey = "uniqueScan_" + employeeId;
+      const businessId = currentBusiness.id || slugify(currentBusiness.name);
+      const uniqueKey = `unique_${employeeId}_${businessId}`;
 
       if (!localStorage.getItem(uniqueKey)) {
         await updateStat("uniqueScans");
@@ -121,12 +265,33 @@
         details: [
           "the team was professional, detailed, and left everything looking fresh",
           "the service was thorough, the team was friendly, and the results were excellent",
-          "everything was handled with care, and the space looked much better afterward"
+          "everything was handled with care, and the space looked much better afterward",
+          "they made the whole process simple and the results were exactly what I needed"
         ],
         endings: [
           "I would definitely recommend them.",
           "I’d gladly use them again.",
-          "Great service from start to finish."
+          "Great service from start to finish.",
+          "I appreciate the care they put into their work."
+        ]
+      },
+
+      default: {
+        openings: [
+          "I had a great experience with",
+          "I really appreciated the service from",
+          "My experience with",
+          "I recently worked with"
+        ],
+        details: [
+          "the team was professional, helpful, and made everything easy",
+          "the service was smooth, the staff was friendly, and everything was handled well",
+          "they were easy to work with, professional, and made the process simple"
+        ],
+        endings: [
+          "I would definitely recommend them.",
+          "I’d gladly use them again.",
+          "Great experience overall."
         ]
       }
     };
@@ -134,9 +299,9 @@
     window.generateReview = function () {
       if (!currentBusiness) return;
 
-      const style = reviewStyles[currentBusiness.industry];
+      const style = reviewStyles[currentBusiness.industry] || reviewStyles.default;
 
-      const review = ${random(style.openings)} ${currentBusiness.name}. ${random(style.details)}. ${random(style.endings)};
+      const review = `${random(style.openings)} ${currentBusiness.name}. ${random(style.details)}. ${random(style.endings)}`;
 
       document.getElementById("reviewText").value = review;
     };
@@ -156,31 +321,34 @@
 
         await updateStat("copiedReviews");
 
-      } catch (err) {
-        alert("Copy failed. Try again.");
+      } catch (e) {
+        alert("Copy failed. Hold down on the text and copy manually.");
       }
     };
 
-    window.trackClick = function (event) {
+    window.openGoogleReview = async function (event) {
       event.preventDefault();
 
       const link = document.getElementById("googleReviewLink").href;
 
-      updateStat("reviewClicks");
+      await updateStat("reviewClicks");
+
       window.open(link, "_blank");
     };
 
-    async function pickRandomBusiness() {
+    async function start() {
+      await loadBusinesses();
+
       currentBusiness = random(businesses);
 
       document.getElementById("businessName").innerText = currentBusiness.name;
-      document.getElementById("googleReviewLink").href = currentBusiness.link;
+      document.getElementById("googleReviewLink").href = currentBusiness.reviewLink || currentBusiness.link;
 
       generateReview();
       await trackScan();
     }
 
-    pickRandomBusiness();
+    start();
   </script>
 
 </body>
