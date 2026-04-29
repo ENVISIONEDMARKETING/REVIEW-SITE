@@ -40,12 +40,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import {
-      getFirestore,
-      doc,
-      setDoc,
-      increment
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
@@ -60,31 +55,28 @@
     const db = getFirestore(app);
 
     const params = new URLSearchParams(window.location.search);
-    const employeeId = params.get("employee");
+    const employeeId = params.get("employee") || "default";
 
     const businesses = [
       {
-        name: "Wholesome House cleaning of ocala",
-        industry: "Cleaning company",
-        serviceType: "cleaning service",
-        link: "https://www.google.com/search?client=safari&hs644a9938c05da2e4&hl=en"
+        name: "Wholesome House Cleaning of Ocala",
+        industry: "cleaning company",
+        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Ocala+reviews"
       },
       {
-        name: "wholesome house cleaning of sarasota",
+        name: "Wholesome House Cleaning of Sarasota",
         industry: "cleaning company",
-        serviceType: "cleaning service",
         link: "https://share.google/rqniZWtrmm7sigLfW"
-      },{
-        name: "wholesome house cleaning of lakewood ranch",
+      },
+      {
+        name: "Wholesome House Cleaning of Lakewood Ranch",
         industry: "cleaning company",
-        serviceType: "cleaning service",
         link: "https://share.google/c1j5c1WN72qeIOAWC"
       },
       {
-        name: "wholesome house cleaning of bradenton",
+        name: "Wholesome House Cleaning of Bradenton",
         industry: "cleaning company",
-        serviceType: "cleaning service",
-        link: "https://www.google.com/search?client=safari&hs=Cw7U&sca_esv=b13991bd8b31e71e&hl=en-us&sxsrf=ANbL-n40Iu_WeJBynDYD1YpLQuh2yHi6Rw:1777412877028&q=wholesome+cleaning+services+of+bradenton+reviews&uds=ALYpb_nxTieTaUqWkV0HA30OSyCoy8BJAT5AIHnE95o8ys2a78dUB4bby4YIZ4PslanQjZkMVpPpOxjAY4gNKMvhT0w3m2hnrvWZGysJvxIrJ9COXT5xrHDoVN18NBY4-hSKpmc6VwDrPqFY9k9zqPso6iWfcgGRAAligvjsEMivuTt9arUOPihw5E9WrGwLNb-IJH76yPI49Gss8jHIyCJyDACOByFmMRo-wJa1iNwV2caU7dzVYlmzyFEPddEf-8iAxyyTRCJYclTMl9VhrMEWpMgg5Ev88mLSXJ7GtQ5uAwYY3hn1c48jhq3Kg1hVLpxFIvBg5AKXQC9UozuyFUgGZyjCOlRSvCbA4M0ZIg-V6XlFFmVD1TXxkitykPYSv-z2daggsPcvQYpR4_7TSYgzM7EV9lCTZ8uuUGxuXMST1cmGwhBMR6jrxCVdUwXmooKz1AGm4SKlutCdBUy9oMjxvOv1Ftp0Me1lAhYSooNpnfpAr9ui3Ef80vNhCp2DCb6ss54eLf0nGexklgHV_e5B8CE_xTLsFnZL5urkhPm4Y7xBqeu9mtI&si=AL3DRZEsmMGCryMMFSHJ3StBhOdZ2-6yYkXd_doETEE1OR-qOaVzfBvgGMc5GMwuEgBMTLTWW34Jg80aDuLOJS8Tim1RgihUdb5s-KJeLxIw3DhOSwOUzZgk0K1PD8raIytONb31WueSDSGzv9INyep4PKx4UItKeIwM8PvFYhCWpcbofNxm7f0%3D&sa=X&ved=2ahUKEwjU4p35wpGUAxXv6BoGHdbVIfYQk8gLegQIGxAB&ictx=1"
+        link: "https://www.google.com/search?q=Wholesome+House+Cleaning+of+Bradenton+reviews"
       }
     ];
 
@@ -94,17 +86,7 @@
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    function isValidReviewLink(link) {
-      return (
-        link &&
-        link !== "#" &&
-        !link.includes("PASTE GOOGLE REVIEW LINK HERE")
-      );
-    }
-
     async function updateStat(field) {
-      if (!employeeId) return;
-
       try {
         await setDoc(doc(db, "employees", employeeId), {
           [field]: increment(1),
@@ -118,8 +100,6 @@
     async function trackScan() {
       await updateStat("scans");
 
-      if (!employeeId) return;
-
       const uniqueKey = "uniqueScan_" + employeeId;
 
       if (!localStorage.getItem(uniqueKey)) {
@@ -128,84 +108,15 @@
       }
     }
 
-    async function pickRandomBusiness() {
-      currentBusiness = random(businesses);
-
-      const businessName = document.getElementById("businessName");
-      const reviewBtn = document.getElementById("googleReviewLink");
-
-      businessName.innerText = currentBusiness.name;
-
-      if (isValidReviewLink(currentBusiness.link)) {
-        reviewBtn.href = currentBusiness.link;
-        reviewBtn.style.display = "block";
-      } else {
-        reviewBtn.href = "#";
-        reviewBtn.style.display = "none";
-      }
-
-      generateReview();
-
-      await trackScan();
-    }
-
     const reviewStyles = {
-      restaurant: {
-        openings: [
-          "Thank you so much for the great work",
-          "I had a really good experience at",
-          "I enjoyed my visit to",
-          "I had a great time at",
-          "My visit to",
-          "I recently stopped by",
-          "I was really impressed with",
-          "I had a smooth experience at",
-          "I’m glad I chose",
-          "I had a positive experience at",
-          "From start to finish, I enjoyed"
-          "I really appreciate the service"
-        ],
-        details: [
-          "the food was fresh, the service was friendly, and the atmosphere felt welcoming",
-          "the staff was helpful, the food came out great, and everything felt clean and comfortable",
-          "the service was smooth, the food was good, and the overall experience was enjoyable",
-          "the team was welcoming, the food tasted great, and I felt taken care of"
-        ],
-        endings: [
-          "I would definitely come back again.",
-          "I’d recommend this spot to anyone looking for a good experience.",
-          "Overall, I’m glad I came here.",
-          "Definitely worth checking out."
-        ]
-      },
-
-      "auto repair": {
-        openings: [
-          "I had a great experience with",
-          "I’m glad I brought my vehicle to",
-          "My experience with",
-          "I recently used"
-        ],
-        details: [
-          "the team was professional, explained everything clearly, and made the process easy",
-          "the service was reliable, communication was clear, and they handled everything well",
-          "they were helpful, honest, and made sure I understood what was going on"
-        ],
-        endings: [
-          "I would definitely use them again.",
-          "I’d recommend them to anyone needing reliable service.",
-          "Great experience overall."
-        ]
-      },
-
       "cleaning company": {
         openings: [
-          " Thank you so much for the great work",
+          "Thank you so much for the great work",
           "I had a great experience with",
           "I was really happy with the service from",
           "My experience with",
-          "I recently used"
-          " I am so amazed"
+          "I recently used",
+          "I am so amazed by"
         ],
         details: [
           "the team was professional, detailed, and left everything looking fresh",
@@ -217,35 +128,15 @@
           "I’d gladly use them again.",
           "Great service from start to finish."
         ]
-      },
-
-      default: {
-        openings: [
-          "I had a great experience with",
-          "I really appreciated the service from",
-          "My experience with",
-          "I recently worked with"
-        ],
-        details: [
-          "the team was professional, helpful, and made everything easy",
-          "the service was smooth, the staff was friendly, and everything was handled well",
-          "they were easy to work with, professional, and made the process simple"
-        ],
-        endings: [
-          "I would definitely recommend them.",
-          "I’d gladly use them again.",
-          "Great experience overall."
-        ]
       }
     };
 
     window.generateReview = function () {
       if (!currentBusiness) return;
 
-      const industry = currentBusiness.industry || "default";
-      const style = reviewStyles[industry] || reviewStyles.default;
+      const style = reviewStyles[currentBusiness.industry];
 
-      const review = `${random(style.openings)} ${currentBusiness.name}. ${random(style.details)}. ${random(style.endings)}`;
+      const review = ${random(style.openings)} ${currentBusiness.name}. ${random(style.details)}. ${random(style.endings)};
 
       document.getElementById("reviewText").value = review;
     };
@@ -275,12 +166,19 @@
 
       const link = document.getElementById("googleReviewLink").href;
 
-      if (!isValidReviewLink(link)) return;
-
-      window.open(link, "_blank");
-
       updateStat("reviewClicks");
+      window.open(link, "_blank");
     };
+
+    async function pickRandomBusiness() {
+      currentBusiness = random(businesses);
+
+      document.getElementById("businessName").innerText = currentBusiness.name;
+      document.getElementById("googleReviewLink").href = currentBusiness.link;
+
+      generateReview();
+      await trackScan();
+    }
 
     pickRandomBusiness();
   </script>
