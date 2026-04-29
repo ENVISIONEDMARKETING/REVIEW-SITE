@@ -39,7 +39,6 @@
     <p class="note" id="employeeTag"></p>
   </div>
 
-  <!-- Firebase non-module version: better for GitHub Pages/mobile -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
@@ -58,10 +57,10 @@
 
     const params = new URLSearchParams(window.location.search);
     const employeeId = params.get("employee") || "default";
+    const businessIdFromUrl = params.get("business");
 
-    document.getElementById("employeeTag").innerText = "Tracking ID: " + employeeId;
+    document.getElementById("employeeTag").innerText = "Employee Tracking ID: " + employeeId;
 
-    let businesses = [];
     let currentBusiness = null;
 
     function random(arr) {
@@ -69,7 +68,9 @@
     }
 
     function slugify(text) {
-      return String(text).toLowerCase().trim()
+      return String(text)
+        .toLowerCase()
+        .trim()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
     }
@@ -97,6 +98,7 @@
           "I appreciate the care they put into their work."
         ]
       },
+
       default: {
         openings: [
           "I had a great experience with",
@@ -117,24 +119,37 @@
       }
     };
 
-    async function loadBusinesses() {
+    async function loadBusiness() {
       try {
-        const snapshot = await db.collection("businesses").get();
+        if (!businessIdFromUrl) {
+          document.getElementById("businessName").innerText = "Missing Business ID";
+          document.getElementById("reviewText").value = "This QR code is missing a business ID. Add &business=your-business-name to the link.";
+          return;
+        }
 
-        businesses = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(b => b.active !== false && b.reviewLink);
+        const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
 
-        if (!businesses.length) {
-          document.getElementById("businessName").innerText = "No businesses found";
-          document.getElementById("reviewText").value = "Please add a business inside admin.html first.";
+        if (!docRef.exists) {
+          document.getElementById("businessName").innerText = "Business Not Found";
+          document.getElementById("reviewText").value = "No business found for: " + businessIdFromUrl;
+          return;
+        }
+
+        currentBusiness = {
+          id: docRef.id,
+          ...docRef.data()
+        };
+
+        if (!currentBusiness.reviewLink) {
+          document.getElementById("businessName").innerText = currentBusiness.name || "Missing Review Link";
+          document.getElementById("reviewText").value = "This business is missing a Google review link.";
           return;
         }
 
         startReviewPage();
 
       } catch (error) {
-        document.getElementById("businessName").innerText = "Firebase error";
+        document.getElementById("businessName").innerText = "Firebase Error";
         document.getElementById("reviewText").value = error.message;
       }
     }
@@ -154,6 +169,7 @@
           [type]: firebase.firestore.FieldValue.increment(1),
           lastActivity: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+
       } catch (error) {
         console.log("Tracking error:", error.message);
       }
@@ -174,7 +190,8 @@
     function generateReview() {
       if (!currentBusiness) return;
 
-      const style = reviewStyles[currentBusiness.industry] || reviewStyles.default;
+      const industry = currentBusiness.industry || "default";
+      const style = reviewStyles[industry] || reviewStyles.default;
 
       const review =
         random(style.openings) + " " +
@@ -216,8 +233,6 @@
     }
 
     function startReviewPage() {
-      currentBusiness = random(businesses);
-
       document.getElementById("businessName").innerText = currentBusiness.name;
       document.getElementById("googleReviewLink").href = currentBusiness.reviewLink;
 
@@ -225,7 +240,7 @@
       trackScan();
     }
 
-    loadBusinesses();
+    loadBusiness();
   </script>
 
 </body>
