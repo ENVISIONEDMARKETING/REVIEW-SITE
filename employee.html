@@ -14,7 +14,7 @@
     }
 
     .box {
-      max-width: 520px;
+      max-width: 620px;
       margin: 30px auto;
       background: white;
       padding: 25px;
@@ -42,7 +42,7 @@
       margin-top: 10px;
       border-radius: 10px;
       border: 1px solid #ccc;
-      font-size: 16px;
+      font-size: 14px;
       box-sizing: border-box;
     }
 
@@ -62,12 +62,6 @@
       box-sizing: border-box;
     }
 
-    .secondary {
-      background: #eee;
-      color: #111;
-      border: 1px solid #ddd;
-    }
-
     .danger {
       background: #b00020;
     }
@@ -79,9 +73,16 @@
       margin-top: 15px;
     }
 
-    .statBox p {
-      margin: 10px 0;
-      font-size: 16px;
+    .businessCard {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 12px;
+      margin-top: 15px;
+    }
+
+    .businessCard h3 {
+      margin: 0 0 8px;
     }
 
     .note {
@@ -105,29 +106,28 @@
     <div class="statBox">
       <p><strong>Your Employee ID:</strong></p>
       <input id="employeeId" readonly />
-
-      <p><strong>Your Personal QR Link:</strong></p>
-      <input id="qrLink" readonly />
-
-      <button onclick="copyQRLink()">Copy My QR Link</button>
-      <a id="openQRLink" target="_blank">Open My Review Page</a>
     </div>
 
     <div class="statBox">
-      <p><strong>QR Scans:</strong> <span id="scanCount">0</span></p>
-      <p><strong>Reviews Copied:</strong> <span id="copyCount">0</span></p>
-      <p><strong>Google Review Button Clicks:</strong> <span id="clickCount">0</span></p>
+      <p><strong>Total QR Scans:</strong> <span id="scanCount">0</span></p>
+      <p><strong>Total Unique Scans:</strong> <span id="uniqueCount">0</span></p>
+      <p><strong>Total Reviews Copied:</strong> <span id="copyCount">0</span></p>
+      <p><strong>Total Google Review Clicks:</strong> <span id="clickCount">0</span></p>
+    </div>
+
+    <div class="statBox">
+      <p><strong>Your Business QR Links:</strong></p>
+      <div id="businessLinks">Loading businesses...</div>
     </div>
 
     <button onclick="refreshStats()">Refresh Stats</button>
     <button class="danger" onclick="logout()">Logout</button>
 
     <p class="note">
-      Your QR link tracks scans, copied reviews, and Google review button clicks under your account.
+      Each link below is already connected to your employee account and that specific business.
     </p>
   </div>
 
-  <!-- FIREBASE SDK -->
   <script type="module">
 
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -142,21 +142,20 @@
       getFirestore,
       doc,
       getDoc,
-      setDoc
+      setDoc,
+      collection,
+      getDocs
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-
-    // 🔥 REPLACE THIS WITH YOUR FIREBASE CONFIG
-const firebaseConfig = {
-    apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-    authDomain: "envisionedmktng.firebaseapp.com",
-    projectId: "envisionedmktng",
-    storageBucket: "envisionedmktng.firebasestorage.app",
-    messagingSenderId: "1075132261537",
-    appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
-    measurementId: "G-8XY38GQQ86"
-  };
-
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
+      authDomain: "envisionedmktng.firebaseapp.com",
+      projectId: "envisionedmktng",
+      storageBucket: "envisionedmktng.firebasestorage.app",
+      messagingSenderId: "1075132261537",
+      appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
+      measurementId: "G-8XY38GQQ86"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -177,17 +176,10 @@ const firebaseConfig = {
 
       document.getElementById("employeeId").value = user.uid;
 
-      const baseUrl = window.location.origin + window.location.pathname.replace("employee.html", "");
-
-      const qrLink = baseUrl + "index.html?employee=" + user.uid;
-
-      document.getElementById("qrLink").value = qrLink;
-      document.getElementById("openQRLink").href = qrLink;
-
       await createEmployeeIfMissing(user);
+      await loadBusinessLinks();
       await refreshStats();
     });
-
 
     async function createEmployeeIfMissing(user) {
       const employeeRef = doc(db, "employees", user.uid);
@@ -197,39 +189,89 @@ const firebaseConfig = {
         await setDoc(employeeRef, {
           email: user.email,
           uid: user.uid,
-          scans: 0,
-          copiedReviews: 0,
-          reviewClicks: 0,
           createdAt: new Date().toISOString()
         });
       }
     }
 
+    async function loadBusinessLinks() {
+      const container = document.getElementById("businessLinks");
+      container.innerHTML = "Loading businesses...";
+
+      const baseUrl = window.location.origin + window.location.pathname.replace("employee.html", "");
+
+      const snapshot = await getDocs(collection(db, "businesses"));
+
+      let html = "";
+
+      snapshot.forEach((docSnap) => {
+        const business = docSnap.data();
+
+        if (business.active === false) return;
+
+        const businessId = docSnap.id;
+
+        const reviewLink =
+          baseUrl +
+          "index.html?employee=" +
+          encodeURIComponent(currentUser.uid) +
+          "&business=" +
+          encodeURIComponent(businessId);
+
+        html += `
+          <div class="businessCard">
+            <h3>${business.name || businessId}</h3>
+
+            <input value="${reviewLink}" readonly id="link_${businessId}" />
+
+            <button onclick="copyBusinessLink('${businessId}')">
+              Copy This QR Link
+            </button>
+
+            <a href="${reviewLink}" target="_blank">
+              Open Review Page
+            </a>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html || "No businesses found. Add a business in admin.html first.";
+    }
+
+    window.copyBusinessLink = function (businessId) {
+      const input = document.getElementById("link_" + businessId);
+      input.select();
+      input.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(input.value);
+      alert("QR link copied!");
+    };
 
     window.refreshStats = async function () {
       if (!currentUser) return;
 
-      const employeeRef = doc(db, "employees", currentUser.uid);
-      const employeeSnap = await getDoc(employeeRef);
+      const snapshot = await getDocs(collection(db, "stats"));
 
-      if (employeeSnap.exists()) {
-        const data = employeeSnap.data();
+      let scans = 0;
+      let uniqueScans = 0;
+      let copiedReviews = 0;
+      let reviewClicks = 0;
 
-        document.getElementById("scanCount").innerText = data.scans || 0;
-        document.getElementById("copyCount").innerText = data.copiedReviews || 0;
-        document.getElementById("clickCount").innerText = data.reviewClicks || 0;
-      }
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+
+        if (data.employeeId === currentUser.uid) {
+          scans += data.scans || 0;
+          uniqueScans += data.uniqueScans || 0;
+          copiedReviews += data.copiedReviews || 0;
+          reviewClicks += data.reviewClicks || 0;
+        }
+      });
+
+      document.getElementById("scanCount").innerText = scans;
+      document.getElementById("uniqueCount").innerText = uniqueScans;
+      document.getElementById("copyCount").innerText = copiedReviews;
+      document.getElementById("clickCount").innerText = reviewClicks;
     };
-
-
-    window.copyQRLink = function () {
-      const qrInput = document.getElementById("qrLink");
-      qrInput.select();
-      qrInput.setSelectionRange(0, 99999);
-      navigator.clipboard.writeText(qrInput.value);
-      alert("QR link copied!");
-    };
-
 
     window.logout = async function () {
       await signOut(auth);
