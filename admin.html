@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage Businesses</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f6;
+      margin: 0;
+      color: #111;
+    }
+
+    header {
+      background: #111;
+      color: white;
+      padding: 22px;
+    }
+
+    main {
+      max-width: 900px;
+      margin: auto;
+      padding: 22px;
+    }
+
+    .card {
+      background: white;
+      padding: 22px;
+      border-radius: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.08);
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-top: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button,
+    a.btn {
+      background: #111;
+      color: white;
+      border: 0;
+      padding: 14px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #111;
+      color: white;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Manage Businesses</h1>
+    <p>Add or update review clients</p>
+  </header>
+
+  <main>
+
+    <div class="card">
+      <h2>Add Business</h2>
+
+      <input id="name" placeholder="Business name" />
+      <input id="industry" placeholder="Industry, ex: cleaning company" />
+      <input id="reviewLink" placeholder="Google review link" />
+
+      <button onclick="saveBusiness()">Save Business</button>
+      <a class="btn" href="dashboard.html">Back to Dashboard</a>
+    </div>
+
+    <div class="card">
+      <h2>Businesses</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Business</th>
+            <th>Industry</th>
+            <th>Status</th>
+            <th>Review Link</th>
+          </tr>
+        </thead>
+
+        <tbody id="businessBody"></tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      setDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
+      authDomain: "envisionedmktng.firebaseapp.com",
+      projectId: "envisionedmktng",
+      storageBucket: "envisionedmktng.firebasestorage.app",
+      messagingSenderId: "1075132261537",
+      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    function slugify(text) {
+      return String(text)
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+    }
+
+    window.saveBusiness = async function () {
+      const name = document.getElementById("name").value.trim();
+      const industry = document.getElementById("industry").value.trim() || "default";
+      const reviewLink = document.getElementById("reviewLink").value.trim();
+
+      if (!name || !reviewLink) {
+        alert("Add a business name and Google review link.");
+        return;
+      }
+
+      const id = slugify(name);
+
+      await setDoc(doc(db, "businesses", id), {
+        name: name,
+        industry: industry,
+        reviewLink: reviewLink,
+        active: true,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+
+      document.getElementById("name").value = "";
+      document.getElementById("industry").value = "";
+      document.getElementById("reviewLink").value = "";
+
+      await loadBusinesses();
+
+      alert("Business saved.");
+    };
+
+    window.loadBusinesses = async function () {
+      const snap = await getDocs(collection(db, "businesses"));
+
+      const rows = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+
+      document.getElementById("businessBody").innerHTML = rows.map(b => `
+        <tr>
+          <td>${b.name || ""}</td>
+          <td>${b.industry || ""}</td>
+          <td>${b.active === false ? "Inactive" : "Active"}</td>
+          <td><a href="${b.reviewLink}" target="_blank">Open</a></td>
+        </tr>
+      `).join("");
+    };
+
+    loadBusinesses();
+  </script>
+
+</body>
+</html>
