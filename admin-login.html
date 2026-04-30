@@ -40,6 +40,11 @@
       background: #111;
       color: white;
       font-weight: bold;
+      cursor: pointer;
+    }
+
+    .reset {
+      background: #777;
     }
   </style>
 </head>
@@ -53,6 +58,7 @@
   <input id="password" type="password" placeholder="Password" />
 
   <button onclick="login()">Login</button>
+  <button class="reset" onclick="resetPassword()">Reset Password</button>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -73,13 +79,28 @@
     const password = document.getElementById("password").value;
 
     auth.signInWithEmailAndPassword(email, password)
-      .then(user => {
+      .then(() => {
         if (email === "johnvarela1025@gmail.com") {
           window.location.href = "dashboard.html";
         } else {
           alert("Not authorized");
           auth.signOut();
         }
+      })
+      .catch(err => alert(err.message));
+  }
+
+  function resetPassword() {
+    const email = document.getElementById("email").value.trim();
+
+    if (!email) {
+      alert("Enter your email first.");
+      return;
+    }
+
+    auth.sendPasswordResetEmail(email)
+      .then(() => {
+        alert("Password reset email sent. Check inbox or spam.");
       })
       .catch(err => alert(err.message));
   }
