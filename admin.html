@@ -17,7 +17,7 @@
     table { width:100%; border-collapse:collapse; background:white; border-radius:18px; overflow:hidden; }
     th, td { padding:12px; border-bottom:1px solid #eee; text-align:left; font-size:14px; vertical-align:top; }
     th { background:#111; color:white; }
-    .actions button { margin-right:6px; margin-top:0; }
+    .actions button { margin-right:6px; margin-top:6px; }
     .small { font-size:12px; color:#666; word-break:break-all; }
   </style>
 </head>
@@ -37,7 +37,8 @@
     <input id="editingId" type="hidden" />
 
     <input id="name" placeholder="Business name" />
-    <input id="industry" placeholder="Industry, ex: cleaning company" />
+    <input id="industry" placeholder="Industry, ex: cleaning company, HVAC, roofing" />
+    <input id="service" placeholder="Main service, ex: deep cleaning, roof repair, AC install" />
     <input id="reviewLink" placeholder="Google review link — must start with https://" />
 
     <button id="saveBtn" class="green" onclick="saveBusiness()">Save Business</button>
@@ -53,6 +54,7 @@
         <tr>
           <th>Business</th>
           <th>Industry</th>
+          <th>Service</th>
           <th>Status</th>
           <th>Review Link</th>
           <th>Actions</th>
@@ -104,6 +106,7 @@
     document.getElementById("editingId").value = "";
     document.getElementById("name").value = "";
     document.getElementById("industry").value = "";
+    document.getElementById("service").value = "";
     document.getElementById("reviewLink").value = "";
     document.getElementById("formTitle").innerText = "Add Business";
     document.getElementById("saveBtn").innerText = "Save Business";
@@ -117,7 +120,8 @@
   window.saveBusiness = async function () {
     const editingId = document.getElementById("editingId").value;
     const name = document.getElementById("name").value.trim();
-    const industry = document.getElementById("industry").value.trim() || "default";
+    const industry = document.getElementById("industry").value.trim() || "local business";
+    const service = document.getElementById("service").value.trim() || industry;
     const reviewLink = document.getElementById("reviewLink").value.trim();
 
     if (!name || !reviewLink) {
@@ -132,14 +136,20 @@
 
     const id = editingId || slugify(name);
 
-    await setDoc(doc(db, "businesses", id), {
+    const businessData = {
       name,
       industry,
+      service,
       reviewLink,
       active: true,
-      updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp()
-    }, { merge: true });
+      updatedAt: serverTimestamp()
+    };
+
+    if (!editingId) {
+      businessData.createdAt = serverTimestamp();
+    }
+
+    await setDoc(doc(db, "businesses", id), businessData, { merge: true });
 
     clearForm();
     await loadBusinesses();
@@ -154,6 +164,7 @@
     document.getElementById("editingId").value = business.id;
     document.getElementById("name").value = business.name || "";
     document.getElementById("industry").value = business.industry || "";
+    document.getElementById("service").value = business.service || "";
     document.getElementById("reviewLink").value = business.reviewLink || "";
 
     document.getElementById("formTitle").innerText = "Edit Business";
@@ -172,7 +183,6 @@
     if (!confirmed) return;
 
     await deleteDoc(doc(db, "businesses", id));
-
     await loadBusinesses();
 
     alert("Business deleted.");
@@ -207,6 +217,7 @@
             <div class="small">ID: ${b.id}</div>
           </td>
           <td>${b.industry || ""}</td>
+          <td>${b.service || ""}</td>
           <td>${active ? "Active" : "Inactive"}</td>
           <td>
             <a href="${b.reviewLink || "#"}" target="_blank">Open</a>
@@ -221,7 +232,7 @@
           </td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="5">No businesses found.</td></tr>`;
+    }).join("") || `<tr><td colspan="6">No businesses found.</td></tr>`;
   };
 
   loadBusinesses();
