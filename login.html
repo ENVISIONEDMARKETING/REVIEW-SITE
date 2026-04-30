@@ -3,6 +3,7 @@
 <head>
   <title>Employee Login | ENVISIONED MARKETING</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
     * { box-sizing: border-box; }
     body {
@@ -16,31 +17,26 @@
       border-radius: 26px; padding: 30px;
       box-shadow: 0 24px 70px rgba(0,0,0,0.45);
     }
-    .brand {
-      text-align: center; font-size: 13px; letter-spacing: 2.5px;
-      font-weight: 800; color: #777; margin-bottom: 10px;
-    }
-    h1 { text-align: center; margin: 8px 0 6px; font-size: 30px; }
-    .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 24px; }
-    label { font-size: 13px; font-weight: bold; display: block; margin-bottom: 7px; }
+    .brand { text-align: center; font-size: 13px; letter-spacing: 2.5px; font-weight: 800; color: #777; }
+    h1 { text-align: center; font-size: 30px; }
+    .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 20px; }
     input {
       width: 100%; padding: 15px; margin-bottom: 15px;
       border-radius: 14px; border: 1px solid #d5d5d5; font-size: 16px;
     }
     button {
-      width: 100%; padding: 15px; border-radius: 14px; border: none;
-      font-size: 16px; font-weight: 800; margin-top: 12px;
+      width: 100%; padding: 15px; border-radius: 14px;
+      border: none; font-weight: 800; margin-top: 10px;
     }
     .primary { background: #111; color: white; }
-    .secondary { background: #f2f2f2; color: #111; border: 1px solid #ddd; }
-    .danger { background: #fff0f0; color: #a00000; border: 1px solid #ffc9c9; }
+    .secondary { background: #f2f2f2; }
+    .danger { background: #fff0f0; color: #a00000; }
     .message {
-      display: none; margin-top: 18px; padding: 13px;
-      border-radius: 14px; font-size: 14px; text-align: center;
+      display: none; margin-top: 15px; padding: 12px;
+      border-radius: 12px; text-align: center;
     }
     .error { background: #ffe5e5; color: #9b0000; }
     .success { background: #e8ffe8; color: #006600; }
-    .note { text-align: center; color: #777; font-size: 12px; margin-top: 18px; }
   </style>
 </head>
 
@@ -48,21 +44,17 @@
   <div class="card">
     <div class="brand">ENVISIONED MARKETING</div>
     <h1>Employee Login</h1>
-    <p class="subtitle">Access your personal QR code, review stats, and employee dashboard.</p>
 
-    <label>Email Address</label>
-    <input id="email" type="email" placeholder="employee@email.com" />
+    <p class="subtitle">Access your dashboard</p>
 
-    <label>Password</label>
-    <input id="password" type="password" placeholder="Minimum 6 characters" />
+    <input id="email" placeholder="Email" />
+    <input id="password" type="password" placeholder="Password" />
 
     <button class="primary" onclick="login()">Login</button>
     <button class="secondary" onclick="signup()">Create Account</button>
     <button class="danger" onclick="resetPassword()">Reset Password</button>
 
     <div id="messageBox" class="message"></div>
-
-    <p class="note">New employees should create an account first. Returning employees should log in.</p>
   </div>
 
   <script type="module">
@@ -72,6 +64,7 @@
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
       sendPasswordResetEmail,
+      onAuthStateChanged,
       setPersistence,
       browserLocalPersistence
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -79,15 +72,12 @@
     const firebaseConfig = {
       apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
       authDomain: "envisionedmktng.firebaseapp.com",
-      projectId: "envisionedmktng",
-      storageBucket: "envisionedmktng.firebasestorage.app",
-      messagingSenderId: "1075132261537",
-      appId: "1:1075132261537:web:2c283114b82d1cee4efce0",
-      measurementId: "G-8XY38GQQ86"
+      projectId: "envisionedmktng"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+
     await setPersistence(auth, browserLocalPersistence);
 
     function showMessage(text, type) {
@@ -97,18 +87,6 @@
       box.style.display = "block";
     }
 
-    function friendlyError(code) {
-      const messages = {
-        "auth/email-already-in-use": "This email already has an account. Tap Login instead.",
-        "auth/weak-password": "Password must be at least 6 characters.",
-        "auth/invalid-email": "Please enter a valid email address.",
-        "auth/missing-password": "Please enter a password.",
-        "auth/invalid-credential": "Login failed. The email or password is wrong, or the account does not exist.",
-        "auth/too-many-requests": "Too many attempts. Wait a few minutes and try again."
-      };
-      return messages[code] || "Error: " + code;
-    }
-
     function getInputs() {
       return {
         email: document.getElementById("email").value.trim(),
@@ -116,48 +94,53 @@
       };
     }
 
-    function validate(email, password, requirePassword = true) {
-      if (!email) return showMessage("Please enter an email.", "error"), false;
-      if (!email.includes("@")) return showMessage("Please enter a valid email.", "error"), false;
-      if (requirePassword && password.length < 6) return showMessage("Password must be at least 6 characters.", "error"), false;
+    function validate(email, password, needPassword = true) {
+      if (!email) return showMessage("Enter email", "error"), false;
+      if (!email.includes("@")) return showMessage("Invalid email", "error"), false;
+      if (needPassword && password.length < 6) return showMessage("Password too short", "error"), false;
       return true;
     }
 
-    window.signup = async function () {
+    // 🔥 Auto redirect if already logged in
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "./employee.html";
+      }
+    });
+
+    window.signup = async () => {
       const { email, password } = getInputs();
-      if (!validate(email, password, true)) return;
+      if (!validate(email, password)) return;
 
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        showMessage("Account created. Opening dashboard...", "success");
         window.location.href = "./employee.html";
-      } catch (error) {
-        showMessage(friendlyError(error.code), "error");
+      } catch (e) {
+        showMessage(e.message, "error");
       }
     };
 
-    window.login = async function () {
+    window.login = async () => {
       const { email, password } = getInputs();
-      if (!validate(email, password, true)) return;
+      if (!validate(email, password)) return;
 
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        showMessage("Login successful. Opening dashboard...", "success");
         window.location.href = "./employee.html";
-      } catch (error) {
-        showMessage(friendlyError(error.code), "error");
+      } catch (e) {
+        showMessage("Login failed", "error");
       }
     };
 
-    window.resetPassword = async function () {
+    window.resetPassword = async () => {
       const { email } = getInputs();
       if (!validate(email, "", false)) return;
 
       try {
         await sendPasswordResetEmail(auth, email);
-        showMessage("Password reset email sent. Check inbox or spam.", "success");
-      } catch (error) {
-        showMessage(friendlyError(error.code), "error");
+        showMessage("Reset email sent", "success");
+      } catch (e) {
+        showMessage("Error sending reset", "error");
       }
     };
   </script>
