@@ -29,7 +29,7 @@ Tone: ${tone}
 Variation seed: ${randomSeed}
 
 Rules:
-- 25 to 45 words
+- 25 to 40 words
 - Must sound like a real customer
 - Mention the business name once
 - Include details that match the industry
