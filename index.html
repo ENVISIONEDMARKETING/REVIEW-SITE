@@ -10,7 +10,7 @@
     .card { background: white; padding: 24px; margin-top: 18px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
     h1 { font-size: 26px; text-align: center; margin-top: 0; }
     textarea { width: 100%; height: 155px; font-size: 16px; padding: 12px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; }
-    button, a { display: block; width: 100%; padding: 15px; margin-top: 15px; color: white; text-align: center; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; }
+    button, a { display: block; width: 100%; padding: 15px; margin-top: 15px; color: white; text-align: center; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; text-decoration: none; box-sizing: border-box; cursor: pointer; }
     .green-btn { background: #1db954; }
     .blue-btn { background: #0b57d0; }
     .note { font-size: 14px; color: #555; margin-top: 14px; text-align: center; }
@@ -24,11 +24,11 @@
   <div class="card">
     <h1>Leave Us a Google Review</h1>
 
-    <p>Here’s a suggested review. Please edit it so it matches your real experience.</p>
+    <p>Here’s an AI-generated review suggestion. Please edit it so it matches your real experience.</p>
 
     <textarea id="reviewText" placeholder="Generating review..."></textarea>
 
-    <button class="green-btn" onclick="generateReview()">Generate New Review</button>
+    <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
     <a id="googleReviewLink" class="green-btn" href="#" target="_blank" rel="noopener noreferrer">
@@ -90,49 +90,6 @@
       const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
       return now.getFullYear() + "-W" + weekNumber;
     }
-
-    const reviewStyles = {
-      "cleaning company": {
-        openings: [
-          "I had a great experience with",
-          "I was really happy with the service from",
-          "Thank you so much for the great work from",
-          "My experience with",
-          "I recently used",
-          "I am so amazed by"
-        ],
-        details: [
-          "the team was professional, detailed, and left everything looking fresh",
-          "the service was thorough and the results were amazing",
-          "everything was handled with care and looked great afterward",
-          "they made the whole process simple and the results were exactly what I needed"
-        ],
-        endings: [
-          "I would definitely recommend them.",
-          "I’d gladly use them again.",
-          "Great service from start to finish.",
-          "I appreciate the care they put into their work."
-        ]
-      },
-      default: {
-        openings: [
-          "I had a great experience with",
-          "I really appreciated the service from",
-          "My experience with",
-          "I recently worked with"
-        ],
-        details: [
-          "the team was professional, helpful, and made everything easy",
-          "the service was smooth, the staff was friendly, and everything was handled well",
-          "they were easy to work with, professional, and made the process simple"
-        ],
-        endings: [
-          "I would definitely recommend them.",
-          "I’d gladly use them again.",
-          "Great experience overall."
-        ]
-      }
-    };
 
     async function loadBusiness() {
       try {
@@ -238,19 +195,49 @@
       }
     }
 
-    function generateReview() {
+    async function generateReview() {
       if (!currentBusiness) return;
 
-      const industry = currentBusiness.industry || "default";
-      const style = reviewStyles[industry] || reviewStyles.default;
+      const reviewBox = document.getElementById("reviewText");
+      reviewBox.value = "Generating AI review...";
 
-      const review =
-        random(style.openings) + " " +
-        currentBusiness.name + ". " +
-        random(style.details) + ". " +
-        random(style.endings);
+      try {
+        const response = await fetch("/.netlify/functions/generate-review", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: currentBusiness.name || "this business",
+            industry: currentBusiness.industry || "business",
+            service: currentBusiness.service || currentBusiness.industry || "service"
+          })
+        });
 
-      document.getElementById("reviewText").value = review;
+        const data = await response.json();
+
+        if (data.review) {
+          reviewBox.value = data.review;
+        } else {
+          reviewBox.value = fallbackReview();
+        }
+
+      } catch (error) {
+        console.error("AI error:", error);
+        reviewBox.value = fallbackReview();
+      }
+    }
+
+    function fallbackReview() {
+      if (!currentBusiness) return "Great experience overall. The service was professional, helpful, and easy from start to finish.";
+
+      const options = [
+        `I had a great experience with ${currentBusiness.name}. The service was professional, helpful, and everything was handled smoothly.`,
+        `${currentBusiness.name} made the process easy and stress-free. The team was friendly, professional, and did a great job.`,
+        `Really happy with my experience with ${currentBusiness.name}. Everything was handled with care and the service was great.`
+      ];
+
+      return random(options);
     }
 
     async function copyReview() {
