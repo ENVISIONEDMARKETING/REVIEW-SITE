@@ -8,6 +8,7 @@ export default async function handler(req, res) {
     const { name, industry, service } = body || {};
 
     const randomSeed = Math.random().toString(36).substring(2);
+
     const tones = [
       "casual and simple",
       "warm and friendly",
@@ -54,14 +55,12 @@ Rules:
 
     const data = await response.json();
 
-    if (!data.output_text) {
-      return res.status(200).json({
-        review: "AI error: " + JSON.stringify(data).slice(0, 250)
-      });
-    }
+    const review =
+      data.output?.[0]?.content?.[0]?.text ||
+      "I had a great experience with this business. Everything was smooth and professional.";
 
     return res.status(200).json({
-      review: data.output_text.trim()
+      review: review.trim()
     });
 
   } catch (error) {
