@@ -10,7 +10,7 @@
     h1 { text-align:center; margin-bottom:5px; }
     .brand { text-align:center; font-size:13px; letter-spacing:2px; font-weight:bold; color:#777; margin-bottom:20px; }
     input { width:100%; padding:14px; margin-top:10px; border-radius:10px; border:1px solid #ccc; font-size:14px; box-sizing:border-box; }
-    button, a { display:block; width:100%; padding:15px; margin-top:14px; border-radius:10px; border:none; background:#111; color:white; text-align:center; text-decoration:none; font-size:16px; font-weight:bold; box-sizing:border-box; }
+    button, a { display:block; width:100%; padding:15px; margin-top:14px; border-radius:10px; border:none; background:#111; color:white; text-align:center; text-decoration:none; font-size:16px; font-weight:bold; box-sizing:border-box; cursor:pointer; }
     .danger { background:#b00020; }
     .statBox { background:#f4f4f4; padding:15px; border-radius:12px; margin-top:15px; }
     .statGrid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; }
@@ -67,9 +67,7 @@
     <button onclick="refreshStats()">Refresh Stats</button>
     <button class="danger" onclick="logout()">Logout</button>
 
-    <p class="note">
-      These stats reset automatically by day, week, and month.
-    </p>
+    <p class="note">These stats reset automatically by day, week, and month.</p>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -121,8 +119,8 @@
 
       document.getElementById("employeeId").value = user.uid;
 
-      const baseUrl = window.location.origin + window.location.pathname.replace("employee.html", "");
-      const qrLink = baseUrl + "index.html?employee=" + encodeURIComponent(user.uid);
+      const baseUrl = window.location.origin + "/";
+      const qrLink = baseUrl + "?employee=" + encodeURIComponent(user.uid);
 
       document.getElementById("qrLink").value = qrLink;
       document.getElementById("openQRLink").href = qrLink;
@@ -139,7 +137,7 @@
         await ref.set({
           email: user.email,
           uid: user.uid,
-          createdAt: new Date().toISOString()
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       }
     }
@@ -149,7 +147,7 @@
     }
 
     function countLog(stats, type) {
-      if (type === "scan") stats.scans++;
+      if (type === "scan" || type === "uniqueScan") stats.scans++;
       if (type === "copy" || type === "copiedReview") stats.copies++;
       if (type === "googleClick") stats.clicks++;
     }
@@ -192,7 +190,6 @@
 
     function copyQRLink() {
       const input = document.getElementById("qrLink");
-      input.select();
       navigator.clipboard.writeText(input.value);
       alert("QR link copied!");
     }
