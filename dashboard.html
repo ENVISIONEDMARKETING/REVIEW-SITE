@@ -7,79 +7,32 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f6; color: #111; }
     header { background: #111; color: white; padding: 22px; }
-    main { padding: 22px; max-width: 1200px; margin: auto; }
+    main { padding: 22px; max-width: 1200px; margin: auto; display:none; }
     h1 { margin: 0; }
-
     .topbar { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0; }
-
-    input, select {
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #ccc;
-      min-width: 220px;
-    }
-
+    input, select { padding: 12px; border-radius: 10px; border: 1px solid #ccc; min-width: 220px; }
     button, a.btn {
-      background: #111;
-      color: white;
-      border: 0;
-      padding: 12px 14px;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: bold;
-      cursor: pointer;
-      display: inline-block;
+      background: #111; color: white; border: 0; padding: 12px 14px;
+      border-radius: 10px; text-decoration: none; font-weight: bold;
+      cursor: pointer; display: inline-block;
     }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin: 22px 0;
-    }
-
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 18px;
-      box-shadow: 0 10px 25px rgba(0,0,0,.08);
-    }
-
+    .danger { background:#b00020; }
+    .gray { background:#777; }
+    .green { background:#1db954; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 22px 0; }
+    .card { background: white; padding: 20px; border-radius: 18px; box-shadow: 0 10px 25px rgba(0,0,0,.08); }
     .label { color: #666; font-size: 14px; }
-
-    .number {
-      font-size: 34px;
-      font-weight: 900;
-      margin-top: 8px;
-    }
-
+    .number { font-size: 34px; font-weight: 900; margin-top: 8px; }
     table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 18px;
-      overflow: hidden;
-      box-shadow: 0 10px 25px rgba(0,0,0,.08);
-      margin-top: 20px;
+      width: 100%; border-collapse: collapse; background: white;
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0,0,0,.08); margin-top: 20px;
     }
-
-    th, td {
-      padding: 14px;
-      border-bottom: 1px solid #eee;
-      text-align: left;
-      font-size: 14px;
-      vertical-align: top;
-    }
-
+    th, td { padding: 14px; border-bottom: 1px solid #eee; text-align: left; font-size: 14px; vertical-align: top; }
     th { background: #111; color: white; }
-
     .section-title { margin-top: 30px; }
-
-    .small {
-      font-size: 12px;
-      color: #777;
-      word-break: break-all;
-    }
+    .small { font-size: 12px; color: #777; word-break: break-all; }
+    #checking { padding:30px; text-align:center; font-weight:bold; }
   </style>
 </head>
 
@@ -90,7 +43,9 @@
   <p>Employee review activity by day, week, and month</p>
 </header>
 
-<main>
+<div id="checking">Checking dashboard access...</div>
+
+<main id="mainContent">
 
   <div class="topbar">
     <select id="timeFilter" onchange="render()">
@@ -103,11 +58,10 @@
     <input id="filter" placeholder="Filter by employee or business..." oninput="render()" />
 
     <button onclick="loadStats()">Refresh Stats</button>
-
     <a class="btn" href="./admin.html">Manage Businesses</a>
     <a class="btn" href="./employee.html">Employee Page</a>
-    <a class="btn" href="./login.html">Login</a>
     <a class="btn" href="./">Review Page</a>
+    <button class="danger" onclick="logoutAdmin()">Logout</button>
   </div>
 
   <div class="grid">
@@ -117,14 +71,24 @@
     <div class="card"><div class="label">Google Review Clicks</div><div class="number" id="totalClicks">0</div></div>
   </div>
 
-  <h2 class="section-title">Rename Employees</h2>
+  <h2 class="section-title">Add Employee</h2>
+  <div class="card">
+    <input id="newEmployeeName" placeholder="Employee display name" />
+    <input id="newEmployeeEmail" placeholder="Employee email" />
+    <button class="green" onclick="addEmployee()">Add Employee Record</button>
+    <p class="small">This adds them to your dashboard list. They still need to create/login with this email on the employee login page.</p>
+  </div>
+
+  <h2 class="section-title">Manage Employees</h2>
   <table>
     <thead>
       <tr>
         <th>Current Name</th>
         <th>Email</th>
         <th>Hidden Firebase ID</th>
-        <th>Rename</th>
+        <th>Edit</th>
+        <th>Status</th>
+        <th>Remove</th>
       </tr>
     </thead>
     <tbody id="employeeManageBody"></tbody>
@@ -176,6 +140,7 @@
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
@@ -189,10 +154,33 @@
   };
 
   firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
   const db = firebase.firestore();
+
+  const ADMIN_EMAILS = [
+    "YOUR_ADMIN_EMAIL@gmail.com"
+  ];
 
   let logs = [];
   let employeesMap = {};
+
+  auth.onAuthStateChanged(async function(user) {
+    if (!user) {
+      window.location.href = "admin-login.html";
+      return;
+    }
+
+    if (!ADMIN_EMAILS.includes(user.email)) {
+      alert("You do not have access to the main dashboard.");
+      window.location.href = "employee.html";
+      return;
+    }
+
+    document.getElementById("checking").style.display = "none";
+    document.getElementById("mainContent").style.display = "block";
+
+    await loadStats();
+  });
 
   function getTodayDate() {
     return new Date().toISOString().split("T")[0];
@@ -211,12 +199,7 @@
   }
 
   function emptyStats() {
-    return {
-      scans: 0,
-      uniqueScans: 0,
-      copiedReviews: 0,
-      reviewClicks: 0
-    };
+    return { scans: 0, uniqueScans: 0, copiedReviews: 0, reviewClicks: 0 };
   }
 
   function countLog(stats, type) {
@@ -228,25 +211,46 @@
 
   function getEmployeeDisplayName(employeeId) {
     const employee = employeesMap[employeeId];
-
     if (!employee) return employeeId;
-
     return employee.employeeName || employee.name || employee.email || employeeId;
   }
 
   async function loadEmployees() {
     const snapshot = await db.collection("employees").get();
-
     employeesMap = {};
 
     snapshot.forEach(doc => {
-      employeesMap[doc.id] = {
-        id: doc.id,
-        ...doc.data()
-      };
+      employeesMap[doc.id] = { id: doc.id, ...doc.data() };
     });
 
     renderEmployeeManager();
+  }
+
+  async function addEmployee() {
+    const name = document.getElementById("newEmployeeName").value.trim();
+    const email = document.getElementById("newEmployeeEmail").value.trim();
+
+    if (!name || !email) {
+      alert("Enter employee name and email.");
+      return;
+    }
+
+    const id = "manual_" + email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+
+    await db.collection("employees").doc(id).set({
+      employeeName: name,
+      email,
+      active: true,
+      manual: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    document.getElementById("newEmployeeName").value = "";
+    document.getElementById("newEmployeeEmail").value = "";
+
+    await loadStats();
+    alert("Employee added.");
   }
 
   function renderEmployeeManager() {
@@ -255,38 +259,81 @@
     document.getElementById("employeeManageBody").innerHTML =
       rows.map(employee => {
         const displayName = employee.employeeName || employee.name || employee.email || "Unnamed Employee";
+        const active = employee.active !== false;
 
         return `
           <tr>
             <td><strong>${displayName}</strong></td>
-            <td>${employee.email || ""}</td>
+            <td>
+              <input id="email_${employee.id}" value="${employee.email || ""}" />
+            </td>
             <td><div class="small">${employee.id}</div></td>
             <td>
               <input id="rename_${employee.id}" value="${displayName}" />
-              <button onclick="saveEmployeeName('${employee.id}')">Save Name</button>
+              <button onclick="saveEmployee('${employee.id}')">Save</button>
+            </td>
+            <td>
+              ${active ? "Active" : "Disabled"}<br>
+              <button class="gray" onclick="toggleEmployee('${employee.id}', ${active})">
+                ${active ? "Disable" : "Enable"}
+              </button>
+            </td>
+            <td>
+              <button class="danger" onclick="deleteEmployee('${employee.id}')">Delete</button>
             </td>
           </tr>
         `;
-      }).join("") || `<tr><td colspan="4">No employees found yet.</td></tr>`;
+      }).join("") || `<tr><td colspan="6">No employees found yet.</td></tr>`;
   }
 
-  async function saveEmployeeName(employeeId) {
-    const input = document.getElementById("rename_" + employeeId);
-    const newName = input.value.trim();
+  async function saveEmployee(employeeId) {
+    const name = document.getElementById("rename_" + employeeId).value.trim();
+    const email = document.getElementById("email_" + employeeId).value.trim();
 
-    if (!newName) {
+    if (!name) {
       alert("Enter a name first.");
       return;
     }
 
     await db.collection("employees").doc(employeeId).set({
-      employeeName: newName,
+      employeeName: name,
+      email,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
     await loadStats();
+    alert("Employee updated.");
+  }
 
-    alert("Employee name saved.");
+  async function toggleEmployee(employeeId, currentActive) {
+    await db.collection("employees").doc(employeeId).set({
+      active: !currentActive,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    await loadStats();
+  }
+
+  async function deleteEmployee(employeeId) {
+    const confirmed = confirm("Delete this employee from dashboard records?\n\nThis also removes their activity logs.");
+    if (!confirmed) return;
+
+    await db.collection("employees").doc(employeeId).delete();
+
+    const logsSnapshot = await db.collection("activityLogs")
+      .where("employeeId", "==", employeeId)
+      .get();
+
+    const batch = db.batch();
+
+    logsSnapshot.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+
+    await loadStats();
+    alert("Employee deleted from dashboard.");
   }
 
   async function loadStats() {
@@ -294,10 +341,7 @@
 
     const snapshot = await db.collection("activityLogs").get();
 
-    logs = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     render();
   }
@@ -316,7 +360,6 @@
       if (timeFilter === "today") matchesTime = log.date === todayKey;
       if (timeFilter === "week") matchesTime = log.week === weekKey;
       if (timeFilter === "month") matchesTime = log.month === monthKey;
-      if (timeFilter === "all") matchesTime = true;
 
       const employeeName = getEmployeeDisplayName(log.employeeId);
 
@@ -347,26 +390,9 @@
       const businessId = log.businessId || businessName;
       const breakdownKey = employeeId + "__" + businessId;
 
-      if (!employees[employeeId]) {
-        employees[employeeId] = {
-          employeeName,
-          employeeId,
-          ...emptyStats()
-        };
-      }
-
-      if (!businesses[businessName]) {
-        businesses[businessName] = emptyStats();
-      }
-
-      if (!breakdown[breakdownKey]) {
-        breakdown[breakdownKey] = {
-          employeeName,
-          employeeId,
-          businessName,
-          ...emptyStats()
-        };
-      }
+      if (!employees[employeeId]) employees[employeeId] = { employeeName, employeeId, ...emptyStats() };
+      if (!businesses[businessName]) businesses[businessName] = emptyStats();
+      if (!breakdown[breakdownKey]) breakdown[breakdownKey] = { employeeName, employeeId, businessName, ...emptyStats() };
 
       countLog(employees[employeeId], log.type);
       countLog(businesses[businessName], log.type);
@@ -381,10 +407,7 @@
     document.getElementById("employeeBody").innerHTML =
       Object.values(employees).map(s => `
         <tr>
-          <td>
-            <strong>${s.employeeName}</strong>
-            <div class="small">${s.employeeId}</div>
-          </td>
+          <td><strong>${s.employeeName}</strong><div class="small">${s.employeeId}</div></td>
           <td>${s.scans}</td>
           <td>${s.uniqueScans}</td>
           <td>${s.copiedReviews}</td>
@@ -406,10 +429,7 @@
     document.getElementById("breakdownBody").innerHTML =
       Object.values(breakdown).map(row => `
         <tr>
-          <td>
-            <strong>${row.employeeName}</strong>
-            <div class="small">${row.employeeId}</div>
-          </td>
+          <td><strong>${row.employeeName}</strong><div class="small">${row.employeeId}</div></td>
           <td>${row.businessName}</td>
           <td>${row.scans}</td>
           <td>${row.uniqueScans}</td>
@@ -419,11 +439,18 @@
       `).join("") || `<tr><td colspan="6">No breakdown activity found.</td></tr>`;
   }
 
-  window.saveEmployeeName = saveEmployeeName;
+  async function logoutAdmin() {
+    await auth.signOut();
+    window.location.href = "admin-login.html";
+  }
+
+  window.addEmployee = addEmployee;
+  window.saveEmployee = saveEmployee;
+  window.toggleEmployee = toggleEmployee;
+  window.deleteEmployee = deleteEmployee;
   window.loadStats = loadStats;
   window.render = render;
-
-  loadStats();
+  window.logoutAdmin = logoutAdmin;
 </script>
 
 </body>
