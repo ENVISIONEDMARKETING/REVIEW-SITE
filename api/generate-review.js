@@ -1,52 +1,31 @@
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
-      return res.status(405).json({ review: "Method not allowed." });
+      return res.status(200).json({ review: "API is connected. Use the Generate Review button." });
     }
 
-    const { name, industry, service } = req.body || {};
+    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    const { name, industry, service } = body || {};
 
     const businessName = name || "this business";
     const businessIndustry = industry || "local business";
     const businessService = service || industry || "service";
 
-    // Random tone variation (this is key 🔥)
-    const tones = [
-      "casual and laid-back",
-      "slightly detailed and thoughtful",
-      "short and straight to the point",
-      "friendly and conversational",
-      "a bit enthusiastic but still realistic"
-    ];
-
-    const randomTone = tones[Math.floor(Math.random() * tones.length)];
-
     const prompt = `
-Write ONE realistic Google review.
+Write one organic, realistic Google review.
 
-Business: ${businessName}
+Business name: ${businessName}
 Industry: ${businessIndustry}
 Service: ${businessService}
 
-Style:
-- Tone: ${randomTone}
-- Sound like a real person typing naturally
-- Not perfect grammar (slight human feel is okay)
-
-Rules:
-- 50–100 words
-- Mention the business name once naturally
-- Include 1–2 details that fit the industry (but don’t overdo it)
-- DO NOT sound like an ad
-- DO NOT be overly polished
-- DO NOT repeat sentence structure
-- DO NOT use the same opening every time
-- Avoid “I highly recommend” every time (mix it up)
-- End naturally, like a real person would
-- No fake specifics like prices, names, or exact dates
-- No mention of AI, incentives, or being asked to review
-
-Make sure this review feels different from others.
+Make it sound like a real person.
+Make it different every time.
+Use natural wording.
+45-90 words.
+Mention the business name once.
+Include details that fit the industry.
+Do not mention AI, discounts, rewards, or incentives.
+Do not sound like an ad.
 `;
 
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -58,7 +37,7 @@ Make sure this review feels different from others.
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         input: prompt,
-        temperature: 1.1, // 🔥 higher = more variation
+        temperature: 1.1,
         max_output_tokens: 180
       })
     });
@@ -66,16 +45,12 @@ Make sure this review feels different from others.
     const data = await response.json();
 
     return res.status(200).json({
-      review: data.output_text || fallbackReview(businessName)
+      review: data.output_text || "I had a good experience with this business. Everything felt smooth, professional, and easy to work with."
     });
 
   } catch (error) {
-    return res.status(500).json({
-      review: fallbackReview("this business")
+    return res.status(200).json({
+      review: "I had a good experience with this business. Everything felt smooth, professional, and easy to work with."
     });
   }
-}
-
-function fallbackReview(name) {
-  return `Had a good experience with ${name}. Everything went smoothly and felt pretty straightforward. Would probably use them again.`;
 }
