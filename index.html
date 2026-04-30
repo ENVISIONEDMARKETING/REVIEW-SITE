@@ -44,12 +44,9 @@
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-      authDomain: "envisionedmktng.firebaseapp.com",
-      projectId: "envisionedmktng",
-      storageBucket: "envisionedmktng.firebasestorage.app",
-      messagingSenderId: "1075132261537",
-      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
+      apiKey: "YOUR_FIREBASE_KEY",
+      authDomain: "YOUR_FIREBASE_DOMAIN",
+      projectId: "YOUR_PROJECT_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -68,131 +65,15 @@
     }
 
     function slugify(text) {
-      return String(text)
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-    }
-
-    function getTodayDate() {
-      return new Date().toISOString().split("T")[0];
-    }
-
-    function getMonthKey() {
-      return new Date().toISOString().slice(0, 7);
-    }
-
-    function getWeekKey() {
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), 0, 1);
-      const pastDays = Math.floor((now - firstDay) / 86400000);
-      const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
-      return now.getFullYear() + "-W" + weekNumber;
+      return String(text).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-");
     }
 
     async function loadBusiness() {
-      try {
-        if (businessIdFromUrl) {
-          const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
+      const snapshot = await db.collection("businesses").get();
+      const businesses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-          if (!docRef.exists) {
-            document.getElementById("businessName").innerText = "Business Not Found";
-            document.getElementById("reviewText").value = "No business found for: " + businessIdFromUrl;
-            return;
-          }
-
-          currentBusiness = {
-            id: docRef.id,
-            ...docRef.data()
-          };
-
-          if (!currentBusiness.reviewLink) {
-            document.getElementById("businessName").innerText = currentBusiness.name || "Missing Review Link";
-            document.getElementById("reviewText").value = "This business is missing a Google review link.";
-            return;
-          }
-
-          startReviewPage();
-          return;
-        }
-
-        const snapshot = await db.collection("businesses").get();
-
-        const businesses = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(b => b.active !== false && b.reviewLink);
-
-        if (!businesses.length) {
-          document.getElementById("businessName").innerText = "No Businesses Found";
-          document.getElementById("reviewText").value = "Add businesses in admin.html first.";
-          return;
-        }
-
-        currentBusiness = random(businesses);
-        startReviewPage();
-
-      } catch (error) {
-        document.getElementById("businessName").innerText = "Firebase Error";
-        document.getElementById("reviewText").value = error.message;
-      }
-    }
-
-    async function logActivity(type) {
-      if (!currentBusiness) return;
-
-      const businessId = currentBusiness.id || slugify(currentBusiness.name);
-
-      try {
-        await db.collection("activityLogs").add({
-          type: type,
-          employeeId: employeeId,
-          businessId: businessId,
-          businessName: currentBusiness.name,
-          industry: currentBusiness.industry || "default",
-          date: getTodayDate(),
-          week: getWeekKey(),
-          month: getMonthKey(),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (error) {
-        console.log("Activity log error:", error.message);
-      }
-    }
-
-    async function updateStat(type) {
-      if (!currentBusiness) return;
-
-      const businessId = currentBusiness.id || slugify(currentBusiness.name);
-      const statId = employeeId + "_" + businessId;
-
-      try {
-        await db.collection("stats").doc(statId).set({
-          employeeId: employeeId,
-          businessId: businessId,
-          businessName: currentBusiness.name,
-          industry: currentBusiness.industry || "default",
-          [type]: firebase.firestore.FieldValue.increment(1),
-          lastActivity: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-
-      } catch (error) {
-        console.log("Tracking error:", error.message);
-      }
-    }
-
-    async function trackScan() {
-      await updateStat("scans");
-      await logActivity("scan");
-
-      const businessId = currentBusiness.id || slugify(currentBusiness.name);
-      const uniqueKey = "unique_" + employeeId + "_" + businessId + "_" + getTodayDate();
-
-      if (!localStorage.getItem(uniqueKey)) {
-        await updateStat("uniqueScans");
-        await logActivity("uniqueScan");
-        localStorage.setItem(uniqueKey, "true");
-      }
+      currentBusiness = random(businesses);
+      startReviewPage();
     }
 
     async function generateReview() {
@@ -202,84 +83,40 @@
       reviewBox.value = "Generating AI review...";
 
       try {
-        const response = await fetch("/.netlify/functions/generate-review", {
+        const response = await fetch("/api/generate-review", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            name: currentBusiness.name || "this business",
-            industry: currentBusiness.industry || "business",
-            service: currentBusiness.service || currentBusiness.industry || "service"
+            name: currentBusiness.name,
+            industry: currentBusiness.industry,
+            service: currentBusiness.service
           })
         });
 
         const data = await response.json();
-
-        if (data.review) {
-          reviewBox.value = data.review;
-        } else {
-          reviewBox.value = fallbackReview();
-        }
+        reviewBox.value = data.review || fallbackReview();
 
       } catch (error) {
-        console.error("AI error:", error);
         reviewBox.value = fallbackReview();
       }
     }
 
     function fallbackReview() {
-      if (!currentBusiness) return "Great experience overall. The service was professional, helpful, and easy from start to finish.";
-
-      const options = [
-        `I had a great experience with ${currentBusiness.name}. The service was professional, helpful, and everything was handled smoothly.`,
-        `${currentBusiness.name} made the process easy and stress-free. The team was friendly, professional, and did a great job.`,
-        `Really happy with my experience with ${currentBusiness.name}. Everything was handled with care and the service was great.`
-      ];
-
-      return random(options);
+      return `I had a great experience with ${currentBusiness.name}. Everything was handled professionally and the process felt smooth.`;
     }
 
     async function copyReview() {
       const text = document.getElementById("reviewText").value;
-
-      try {
-        await navigator.clipboard.writeText(text);
-
-        const btn = document.querySelector(".copy-btn");
-        btn.innerText = "Copied ✓";
-
-        setTimeout(() => {
-          btn.innerText = "Copy Suggested Review";
-        }, 1500);
-
-        await updateStat("copiedReviews");
-        await logActivity("copy");
-
-      } catch (error) {
-        alert("Copy failed. Hold down on the text and copy manually.");
-      }
-    }
-
-    async function trackGoogleReviewClick() {
-      if (!currentBusiness || !currentBusiness.reviewLink) return;
-
-      await updateStat("reviewClicks");
-      await logActivity("googleClick");
+      await navigator.clipboard.writeText(text);
+      alert("Copied!");
     }
 
     function startReviewPage() {
       document.getElementById("businessName").innerText = currentBusiness.name;
-
-      const reviewBtn = document.getElementById("googleReviewLink");
-      reviewBtn.href = currentBusiness.reviewLink;
-
-      reviewBtn.addEventListener("click", function () {
-        trackGoogleReviewClick();
-      });
-
+      document.getElementById("googleReviewLink").href = currentBusiness.reviewLink;
       generateReview();
-      trackScan();
     }
 
     loadBusiness();
