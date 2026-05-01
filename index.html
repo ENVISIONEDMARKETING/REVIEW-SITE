@@ -130,84 +130,37 @@
     async function logActivity(type) {
       if (!currentBusiness) return;
 
-      try {
-        await db.collection("activityLogs").add({
-          type,
-          employeeId,
-          businessId: currentBusiness.id,
-          businessName: currentBusiness.name,
-          industry: currentBusiness.industry || "business",
-          date: getTodayDate(),
-          week: getWeekKey(),
-          month: getMonthKey(),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (error) {
-        console.log("Log error:", error.message);
-      }
+      await db.collection("activityLogs").add({
+        type,
+        employeeId,
+        businessId: currentBusiness.id,
+        businessName: currentBusiness.name,
+        industry: currentBusiness.industry || "business",
+        date: getTodayDate(),
+        week: getWeekKey(),
+        month: getMonthKey(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
     }
 
     async function loadBusiness() {
-      try {
-        if (businessIdFromUrl) {
-          const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
+      const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
+      currentBusiness = { id: docRef.id, ...docRef.data() };
 
-          if (!docRef.exists) {
-            document.getElementById("businessName").innerText = "Business Not Found";
-            document.getElementById("reviewText").value = "No business found for: " + businessIdFromUrl;
-            return;
-          }
+      document.getElementById("businessName").innerText = currentBusiness.name;
 
-          currentBusiness = { id: docRef.id, ...docRef.data() };
+      const reviewBtn = document.getElementById("googleReviewLink");
+      reviewBtn.href = currentBusiness.reviewLink;
 
-        } else {
-          const snapshot = await db.collection("businesses").get();
+      reviewBtn.addEventListener("click", function () {
+        if (!limitReached) logActivity("googleClick");
+      });
 
-          const businesses = snapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
-            .filter(b => b.active !== false && b.reviewLink);
+      await logActivity("scan");
 
-          if (!businesses.length) {
-            document.getElementById("businessName").innerText = "No Businesses Found";
-            document.getElementById("reviewText").value = "Add businesses in admin.html first.";
-            return;
-          }
+      await checkLimitsAndUpdateButton();
 
-          currentBusiness = random(businesses);
-        }
-
-        if (!currentBusiness.reviewLink) {
-          document.getElementById("businessName").innerText = currentBusiness.name || "Missing Review Link";
-          document.getElementById("reviewText").value = "This business is missing a Google review link.";
-          return;
-        }
-
-        document.getElementById("businessName").innerText = currentBusiness.name;
-
-        const reviewBtn = document.getElementById("googleReviewLink");
-        reviewBtn.href = currentBusiness.reviewLink;
-
-        reviewBtn.addEventListener("click", function () {
-          if (!limitReached) logActivity("googleClick");
-        });
-
-        await logActivity("scan");
-
-        const uniqueKey = "unique_" + employeeId + "_" + currentBusiness.id + "_" + getTodayDate();
-
-        if (!localStorage.getItem(uniqueKey)) {
-          await logActivity("uniqueScan");
-          localStorage.setItem(uniqueKey, "true");
-        }
-
-        await checkLimitsAndUpdateButton();
-
-        if (!limitReached) generateReview();
-
-      } catch (error) {
-        document.getElementById("businessName").innerText = "Firebase Error";
-        document.getElementById("reviewText").value = error.message;
-      }
+      if (!limitReached) generateReview();
     }
 
     async function generateReview() {
@@ -215,7 +168,8 @@
 
       const reviewBox = document.getElementById("reviewText");
 
-      reviewBox.value = fallbackReview();
+      // ✅ FIXED HERE
+      reviewBox.value = "Generating AI review...";
 
       try {
         const controller = new AbortController();
@@ -226,9 +180,9 @@
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            name: currentBusiness.name || "this business",
-            industry: currentBusiness.industry || "business",
-            service: currentBusiness.service || currentBusiness.industry || "service"
+            name: currentBusiness.name,
+            industry: currentBusiness.industry,
+            service: currentBusiness.service
           })
         });
 
@@ -236,45 +190,27 @@
 
         const data = await response.json();
 
-        if (data.review && !data.review.startsWith("API error")) {
+        if (data.review) {
           reviewBox.value = data.review;
         }
 
       } catch (error) {
-        console.error("AI error:", error);
+        reviewBox.value = "Could not generate review. Try again.";
       }
-    }
-
-    function fallbackReview() {
-      if (!currentBusiness) return "Good experience overall.";
-
-      const options = [
-        `I had a good experience with ${currentBusiness.name}. Everything went smoothly and felt easy to deal with.`,
-        `${currentBusiness.name} was easy to work with and handled everything well. I would recommend them.`,
-        `Overall, I had a solid experience with ${currentBusiness.name}. The service was professional and simple.`
-      ];
-
-      return random(options);
     }
 
     async function copyReview() {
       const text = document.getElementById("reviewText").value;
+      await navigator.clipboard.writeText(text);
 
-      try {
-        await navigator.clipboard.writeText(text);
+      const btn = document.querySelector(".copy-btn");
+      btn.innerText = "Copied ✓";
 
-        const btn = document.querySelector(".copy-btn");
-        btn.innerText = "Copied ✓";
+      setTimeout(() => {
+        btn.innerText = "Copy Suggested Review";
+      }, 1500);
 
-        setTimeout(() => {
-          btn.innerText = "Copy Suggested Review";
-        }, 1500);
-
-        await logActivity("copy");
-
-      } catch (error) {
-        alert("Copy failed. Hold down on the text and copy manually.");
-      }
+      await logActivity("copy");
     }
 
     loadBusiness();
