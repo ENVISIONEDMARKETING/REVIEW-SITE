@@ -13,9 +13,7 @@
     button, a { display:block; width:100%; padding:15px; margin-top:15px; color:white; text-align:center; border:none; border-radius:10px; font-size:16px; font-weight:bold; text-decoration:none; box-sizing:border-box; cursor:pointer; }
     .green-btn { background:#1db954; }
     .blue-btn { background:#0b57d0; }
-    .gray-btn { background:#777; pointer-events:none; }
     .note { font-size:14px; color:#555; margin-top:14px; text-align:center; }
-    .limit-box { background:#f2f2f2; padding:10px; border-radius:10px; text-align:center; margin-top:12px; font-size:13px; color:#444; }
   </style>
 </head>
 
@@ -33,11 +31,9 @@
     <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" class="green-btn" href="#" onclick="handleReviewClick(event)" rel="noopener noreferrer">
+    <a id="googleReviewLink" class="green-btn" href="#" target="_blank" rel="noopener noreferrer" onclick="logGoogleClick()">
       Open Google Review Page
     </a>
-
-    <div class="limit-box" id="limitBox"></div>
 
     <p class="note">Please only leave an honest review based on your real experience.</p>
     <p class="note" id="employeeTag"></p>
@@ -66,19 +62,9 @@
     document.getElementById("employeeTag").innerText = "Employee Tracking ID: " + employeeId;
 
     let currentBusiness = null;
-    let verifiedTodayCount = 0;
-    let verifiedMonthCount = 0;
 
     function random(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
-    }
-
-    function slugify(text) {
-      return String(text)
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
     }
 
     function getTodayDate() {
@@ -95,67 +81,6 @@
       const pastDays = Math.floor((now - firstDay) / 86400000);
       const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
       return now.getFullYear() + "-W" + weekNumber;
-    }
-
-    function calculateDailyLimit(monthlyLimit) {
-      return Math.ceil((monthlyLimit || 30) / 30);
-    }
-
-    async function countVerifiedReviews() {
-      if (!currentBusiness) return;
-
-      const today = getTodayDate();
-      const month = getMonthKey();
-
-      const snap = await db.collection("activityLogs")
-        .where("businessId", "==", currentBusiness.id)
-        .where("type", "==", "verifiedReview")
-        .get();
-
-      verifiedTodayCount = 0;
-      verifiedMonthCount = 0;
-
-      snap.forEach(doc => {
-        const data = doc.data();
-
-        if (data.date === today) verifiedTodayCount++;
-        if (data.month === month) verifiedMonthCount++;
-      });
-    }
-
-    function updateLimitBox() {
-      if (!currentBusiness) return;
-
-      const monthlyLimit = currentBusiness.monthlyLimit || 30;
-      const dailyLimit = currentBusiness.dailyLimit || calculateDailyLimit(monthlyLimit);
-
-      document.getElementById("limitBox").innerText =
-        `Verified Progress: ${verifiedMonthCount}/${monthlyLimit} this month • ${verifiedTodayCount}/${dailyLimit} today`;
-    }
-
-    async function checkVerifiedLimits() {
-      await countVerifiedReviews();
-      updateLimitBox();
-
-      const monthlyLimit = currentBusiness.monthlyLimit || 30;
-      const dailyLimit = currentBusiness.dailyLimit || calculateDailyLimit(monthlyLimit);
-
-      if (currentBusiness.active === false) {
-        alert("This business is currently inactive.");
-        return false;
-      }
-
-      if (verifiedTodayCount >= dailyLimit) {
-        alert("This business has reached today’s verified review limit.");
-        return false;
-      }
-
-      if (verifiedMonthCount >= monthlyLimit) {
-        alert("This business has reached its monthly verified review limit.");
-        return false;
-      }
-
-      return true;
     }
 
     async function loadBusiness() {
@@ -206,13 +131,6 @@
 
     async function generateReview() {
       if (!currentBusiness) return;
-
-      const allowed = await checkVerifiedLimits();
-
-      if (!allowed) {
-        document.getElementById("reviewText").value = "This business has reached its verified review limit for now.";
-        return;
-      }
 
       const reviewBox = document.getElementById("reviewText");
       reviewBox.value = "Generating AI review...";
@@ -295,15 +213,8 @@
       }
     }
 
-    async function handleReviewClick(event) {
-      event.preventDefault();
-
-      const allowed = await checkVerifiedLimits();
-      if (!allowed) return;
-
-      await logActivity("googleClick");
-
-      window.open(currentBusiness.reviewLink, "_blank");
+    function logGoogleClick() {
+      logActivity("googleClick");
     }
 
     async function trackScan() {
@@ -319,14 +230,11 @@
       }
     }
 
-    async function startReviewPage() {
+    function startReviewPage() {
       document.getElementById("businessName").innerText = currentBusiness.name;
 
       const reviewBtn = document.getElementById("googleReviewLink");
       reviewBtn.href = currentBusiness.reviewLink;
-
-      await countVerifiedReviews();
-      updateLimitBox();
 
       generateReview();
       trackScan();
