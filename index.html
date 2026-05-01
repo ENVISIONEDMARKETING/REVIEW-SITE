@@ -27,12 +27,12 @@
 
     <p>Here’s an AI-generated review suggestion. Please edit it so it matches your real experience.</p>
 
-    <textarea id="reviewText" placeholder="Loading review..."></textarea>
+    <textarea id="reviewText" placeholder="Generating review..."></textarea>
 
     <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" class="green-btn" href="#" target="_blank" rel="noopener noreferrer">
+    <a id="googleReviewLink" class="green-btn" href="#" target="_blank">
       Open Google Review Page
     </a>
 
@@ -40,181 +40,158 @@
     <p class="note" id="employeeTag"></p>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-      authDomain: "envisionedmktng.firebaseapp.com",
-      projectId: "envisionedmktng",
-      storageBucket: "envisionedmktng.firebasestorage.app",
-      messagingSenderId: "1075132261537",
-      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
-    };
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
+  authDomain: "envisionedmktng.firebaseapp.com",
+  projectId: "envisionedmktng"
+};
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    const params = new URLSearchParams(window.location.search);
-    const employeeId = params.get("employee") || "default";
-    const businessIdFromUrl = params.get("business");
+const params = new URLSearchParams(window.location.search);
+const employeeId = params.get("employee") || "default";
+const businessIdFromUrl = params.get("business");
 
-    document.getElementById("employeeTag").innerText = "Employee Tracking ID: " + employeeId;
+document.getElementById("employeeTag").innerText = "Employee Tracking ID: " + employeeId;
 
-    let currentBusiness = null;
-    let limitReached = false;
+let currentBusiness = null;
+let limitReached = false;
 
-    function random(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
+function random(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getMonthKey() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function getWeekKey() {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), 0, 1);
+  const pastDays = Math.floor((now - firstDay) / 86400000);
+  const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+  return now.getFullYear() + "-W" + weekNumber;
+}
+
+async function logActivity(type) {
+  if (!currentBusiness) return;
+
+  await db.collection("activityLogs").add({
+    type,
+    employeeId,
+    businessId: currentBusiness.id,
+    businessName: currentBusiness.name,
+    date: getTodayDate(),
+    week: getWeekKey(),
+    month: getMonthKey(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+async function getVerifiedCounts() {
+  const snap = await db.collection("activityLogs")
+    .where("businessId","==",currentBusiness.id)
+    .where("type","==","verifiedReview")
+    .get();
+
+  let todayCount = 0;
+  let monthCount = 0;
+
+  snap.forEach(doc => {
+    const d = doc.data();
+    if (d.date === getTodayDate()) todayCount++;
+    if (d.month === getMonthKey()) monthCount++;
+  });
+
+  return { todayCount, monthCount };
+}
+
+async function checkLimits() {
+  const counts = await getVerifiedCounts();
+
+  const monthlyLimit = Number(currentBusiness.monthlyLimit || 30);
+  const dailyLimit = Number(currentBusiness.dailyLimit || 1);
+
+  const btn = document.getElementById("googleReviewLink");
+
+  if (counts.todayCount >= dailyLimit || counts.monthCount >= monthlyLimit) {
+    limitReached = true;
+    btn.classList.remove("green-btn");
+    btn.classList.add("gray-btn");
+    btn.innerText = "Limit Reached";
+    document.getElementById("reviewText").value = "Review limit reached.";
+  } else {
+    limitReached = false;
+    btn.href = currentBusiness.reviewLink;
+  }
+}
+
+async function loadBusiness() {
+  const doc = await db.collection("businesses").doc(businessIdFromUrl).get();
+  currentBusiness = { id: doc.id, ...doc.data() };
+
+  document.getElementById("businessName").innerText = currentBusiness.name;
+
+  document.getElementById("googleReviewLink").onclick = () => {
+    if (!limitReached) logActivity("googleClick");
+  };
+
+  await logActivity("scan");
+  await checkLimits();
+  generateReview();
+}
+
+async function generateReview() {
+  if (!currentBusiness || limitReached) return;
+
+  const box = document.getElementById("reviewText");
+  box.value = "Generating AI review...";
+
+  try {
+    const res = await fetch("/api/generate-review", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        name: currentBusiness.name,
+        industry: currentBusiness.industry,
+        service: currentBusiness.service
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.review) {
+      box.value = data.review;
+    } else {
+      box.value = fallbackReview();
     }
 
-    function getTodayDate() {
-      return new Date().toISOString().split("T")[0];
-    }
+  } catch (err) {
+    box.value = fallbackReview();
+  }
+}
 
-    function getMonthKey() {
-      return new Date().toISOString().slice(0, 7);
-    }
+function fallbackReview() {
+  return `Great experience with ${currentBusiness.name}. Highly recommend their service.`;
+}
 
-    function getWeekKey() {
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), 0, 1);
-      const pastDays = Math.floor((now - firstDay) / 86400000);
-      const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
-      return now.getFullYear() + "-W" + weekNumber;
-    }
+async function copyReview() {
+  const text = document.getElementById("reviewText").value;
+  await navigator.clipboard.writeText(text);
+  await logActivity("copy");
+}
 
-    async function getVerifiedCounts() {
-      const snap = await db.collection("activityLogs")
-        .where("businessId", "==", currentBusiness.id)
-        .where("type", "==", "verifiedReview")
-        .get();
-
-      let todayCount = 0;
-      let monthCount = 0;
-
-      snap.forEach(doc => {
-        const data = doc.data();
-        if (data.date === getTodayDate()) todayCount++;
-        if (data.month === getMonthKey()) monthCount++;
-      });
-
-      return { todayCount, monthCount };
-    }
-
-    async function checkLimitsAndUpdateButton() {
-      const counts = await getVerifiedCounts();
-
-      const monthlyLimit = Number(currentBusiness.monthlyLimit || 30);
-      const dailyLimit = Number(currentBusiness.dailyLimit || 1);
-
-      const reviewBtn = document.getElementById("googleReviewLink");
-
-      if (counts.todayCount >= dailyLimit || counts.monthCount >= monthlyLimit || currentBusiness.active === false) {
-        limitReached = true;
-        reviewBtn.href = "#";
-        reviewBtn.classList.remove("green-btn");
-        reviewBtn.classList.add("gray-btn");
-        reviewBtn.innerText = "Review Limit Reached";
-        document.getElementById("reviewText").value = "This business has reached its review limit for now.";
-      } else {
-        limitReached = false;
-        reviewBtn.href = currentBusiness.reviewLink;
-        reviewBtn.classList.remove("gray-btn");
-        reviewBtn.classList.add("green-btn");
-        reviewBtn.innerText = "Open Google Review Page";
-      }
-    }
-
-    async function logActivity(type) {
-      if (!currentBusiness) return;
-
-      await db.collection("activityLogs").add({
-        type,
-        employeeId,
-        businessId: currentBusiness.id,
-        businessName: currentBusiness.name,
-        industry: currentBusiness.industry || "business",
-        date: getTodayDate(),
-        week: getWeekKey(),
-        month: getMonthKey(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }
-
-    async function loadBusiness() {
-      const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
-      currentBusiness = { id: docRef.id, ...docRef.data() };
-
-      document.getElementById("businessName").innerText = currentBusiness.name;
-
-      const reviewBtn = document.getElementById("googleReviewLink");
-      reviewBtn.href = currentBusiness.reviewLink;
-
-      reviewBtn.addEventListener("click", function () {
-        if (!limitReached) logActivity("googleClick");
-      });
-
-      await logActivity("scan");
-
-      await checkLimitsAndUpdateButton();
-
-      if (!limitReached) generateReview();
-    }
-
-    async function generateReview() {
-      if (!currentBusiness || limitReached) return;
-
-      const reviewBox = document.getElementById("reviewText");
-
-      // ✅ FIXED HERE
-      reviewBox.value = "Generating AI review...";
-
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-
-        const response = await fetch("/api/generate-review", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            name: currentBusiness.name,
-            industry: currentBusiness.industry,
-            service: currentBusiness.service
-          })
-        });
-
-        clearTimeout(timeout);
-
-        const data = await response.json();
-
-        if (data.review) {
-          reviewBox.value = data.review;
-        }
-
-      } catch (error) {
-        reviewBox.value = "Could not generate review. Try again.";
-      }
-    }
-
-    async function copyReview() {
-      const text = document.getElementById("reviewText").value;
-      await navigator.clipboard.writeText(text);
-
-      const btn = document.querySelector(".copy-btn");
-      btn.innerText = "Copied ✓";
-
-      setTimeout(() => {
-        btn.innerText = "Copy Suggested Review";
-      }, 1500);
-
-      await logActivity("copy");
-    }
-
-    loadBusiness();
-  </script>
+loadBusiness();
+</script>
 
 </body>
 </html>
