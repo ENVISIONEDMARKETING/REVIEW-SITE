@@ -7,7 +7,7 @@
   <style>
     body { font-family: Arial, sans-serif; background:#f5f5f6; margin:0; color:#111; }
     header { background:#111; color:white; padding:22px; }
-    main { max-width:1000px; margin:auto; padding:22px; }
+    main { max-width:1100px; margin:auto; padding:22px; }
     .card { background:white; padding:22px; border-radius:18px; box-shadow:0 10px 25px rgba(0,0,0,.08); margin-bottom:20px; }
     input { width:100%; padding:14px; margin-top:10px; border-radius:10px; border:1px solid #ccc; box-sizing:border-box; }
     button, a.btn { background:#111; color:white; border:0; padding:12px 14px; border-radius:10px; font-weight:bold; cursor:pointer; text-decoration:none; display:inline-block; margin-top:12px; }
@@ -41,6 +41,9 @@
     <input id="service" placeholder="Main service, ex: deep cleaning, roof repair, AC install" />
     <input id="reviewLink" placeholder="Google review link — must start with https://" />
 
+    <input id="monthlyLimit" type="number" placeholder="Monthly Review Limit, ex: 30 or 90" />
+    <input id="price" type="number" placeholder="Monthly Price, ex: 300" />
+
     <button id="saveBtn" class="green" onclick="saveBusiness()">Save Business</button>
     <button id="cancelBtn" class="gray" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
     <a class="btn" href="dashboard.html">Back to Dashboard</a>
@@ -55,6 +58,8 @@
           <th>Business</th>
           <th>Industry</th>
           <th>Service</th>
+          <th>Plan</th>
+          <th>Usage</th>
           <th>Status</th>
           <th>Review Link</th>
           <th>Actions</th>
@@ -102,12 +107,26 @@
       .replace(/(^-|-$)/g, "");
   }
 
+  function getTodayDate() {
+    return new Date().toISOString().split("T")[0];
+  }
+
+  function getMonthKey() {
+    return new Date().toISOString().slice(0, 7);
+  }
+
+  function calculateDailyLimit(monthlyLimit) {
+    return Math.ceil(monthlyLimit / 30);
+  }
+
   function clearForm() {
     document.getElementById("editingId").value = "";
     document.getElementById("name").value = "";
     document.getElementById("industry").value = "";
     document.getElementById("service").value = "";
     document.getElementById("reviewLink").value = "";
+    document.getElementById("monthlyLimit").value = "";
+    document.getElementById("price").value = "";
     document.getElementById("formTitle").innerText = "Add Business";
     document.getElementById("saveBtn").innerText = "Save Business";
     document.getElementById("cancelBtn").style.display = "none";
@@ -123,6 +142,9 @@
     const industry = document.getElementById("industry").value.trim() || "local business";
     const service = document.getElementById("service").value.trim() || industry;
     const reviewLink = document.getElementById("reviewLink").value.trim();
+    const monthlyLimit = parseInt(document.getElementById("monthlyLimit").value) || 30;
+    const price = parseFloat(document.getElementById("price").value) || 0;
+    const dailyLimit = calculateDailyLimit(monthlyLimit);
 
     if (!name || !reviewLink) {
       alert("Add a business name and Google review link.");
@@ -135,13 +157,21 @@
     }
 
     const id = editingId || slugify(name);
+    const existingBusiness = businessRows.find(b => b.id === id);
 
     const businessData = {
       name,
       industry,
       service,
       reviewLink,
+      monthlyLimit,
+      dailyLimit,
+      price,
       active: true,
+      monthKey: existingBusiness?.monthKey || getMonthKey(),
+      lastResetDate: existingBusiness?.lastResetDate || getTodayDate(),
+      currentMonthCount: existingBusiness?.currentMonthCount || 0,
+      todayCount: existingBusiness?.todayCount || 0,
       updatedAt: serverTimestamp()
     };
 
@@ -166,6 +196,8 @@
     document.getElementById("industry").value = business.industry || "";
     document.getElementById("service").value = business.service || "";
     document.getElementById("reviewLink").value = business.reviewLink || "";
+    document.getElementById("monthlyLimit").value = business.monthlyLimit || "";
+    document.getElementById("price").value = business.price || "";
 
     document.getElementById("formTitle").innerText = "Edit Business";
     document.getElementById("saveBtn").innerText = "Update Business";
@@ -209,6 +241,11 @@
 
     document.getElementById("businessBody").innerHTML = businessRows.map(b => {
       const active = b.active !== false;
+      const monthlyLimit = b.monthlyLimit || 30;
+      const dailyLimit = b.dailyLimit || calculateDailyLimit(monthlyLimit);
+      const todayCount = b.todayCount || 0;
+      const monthCount = b.currentMonthCount || 0;
+      const price = b.price || 0;
 
       return `
         <tr>
@@ -218,6 +255,15 @@
           </td>
           <td>${b.industry || ""}</td>
           <td>${b.service || ""}</td>
+          <td>
+            <strong>$${price}/mo</strong>
+            <div class="small">${monthlyLimit} reviews/mo</div>
+            <div class="small">${dailyLimit} max/day</div>
+          </td>
+          <td>
+            <strong>${monthCount}/${monthlyLimit}</strong> this month
+            <div class="small">${todayCount}/${dailyLimit} today</div>
+          </td>
           <td>${active ? "Active" : "Inactive"}</td>
           <td>
             <a href="${b.reviewLink || "#"}" target="_blank">Open</a>
@@ -232,7 +278,7 @@
           </td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="6">No businesses found.</td></tr>`;
+    }).join("") || `<tr><td colspan="8">No businesses found.</td></tr>`;
   };
 
   loadBusinesses();
