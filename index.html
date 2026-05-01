@@ -27,7 +27,7 @@
 
     <p>Here’s an AI-generated review suggestion. Please edit it so it matches your real experience.</p>
 
-    <textarea id="reviewText" placeholder="Loading review..."></textarea>
+    <textarea id="reviewText" placeholder="Generating review..."></textarea>
 
     <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
@@ -149,38 +149,8 @@
 
     async function loadBusiness() {
       try {
-        if (businessIdFromUrl) {
-          const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
-
-          if (!docRef.exists) {
-            document.getElementById("businessName").innerText = "Business Not Found";
-            document.getElementById("reviewText").value = "No business found for: " + businessIdFromUrl;
-            return;
-          }
-
-          currentBusiness = { id: docRef.id, ...docRef.data() };
-
-        } else {
-          const snapshot = await db.collection("businesses").get();
-
-          const businesses = snapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
-            .filter(b => b.active !== false && b.reviewLink);
-
-          if (!businesses.length) {
-            document.getElementById("businessName").innerText = "No Businesses Found";
-            document.getElementById("reviewText").value = "Add businesses in admin.html first.";
-            return;
-          }
-
-          currentBusiness = random(businesses);
-        }
-
-        if (!currentBusiness.reviewLink) {
-          document.getElementById("businessName").innerText = currentBusiness.name || "Missing Review Link";
-          document.getElementById("reviewText").value = "This business is missing a Google review link.";
-          return;
-        }
+        const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
+        currentBusiness = { id: docRef.id, ...docRef.data() };
 
         document.getElementById("businessName").innerText = currentBusiness.name;
 
@@ -193,19 +163,11 @@
 
         await logActivity("scan");
 
-        const uniqueKey = "unique_" + employeeId + "_" + currentBusiness.id + "_" + getTodayDate();
-
-        if (!localStorage.getItem(uniqueKey)) {
-          await logActivity("uniqueScan");
-          localStorage.setItem(uniqueKey, "true");
-        }
-
         await checkLimitsAndUpdateButton();
 
         if (!limitReached) generateReview();
 
       } catch (error) {
-        document.getElementById("businessName").innerText = "Firebase Error";
         document.getElementById("reviewText").value = error.message;
       }
     }
@@ -215,7 +177,8 @@
 
       const reviewBox = document.getElementById("reviewText");
 
-      reviewBox.value = fallbackReview();
+      // 🔥 FIXED HERE
+      reviewBox.value = "Generating AI review...";
 
       try {
         const controller = new AbortController();
@@ -226,9 +189,9 @@
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            name: currentBusiness.name || "this business",
-            industry: currentBusiness.industry || "business",
-            service: currentBusiness.service || currentBusiness.industry || "service"
+            name: currentBusiness.name,
+            industry: currentBusiness.industry,
+            service: currentBusiness.service
           })
         });
 
@@ -236,45 +199,28 @@
 
         const data = await response.json();
 
-        if (data.review && !data.review.startsWith("API error")) {
+        if (data.review) {
           reviewBox.value = data.review;
         }
 
       } catch (error) {
-        console.error("AI error:", error);
+        reviewBox.value = "Could not generate review. Please try again.";
       }
-    }
-
-    function fallbackReview() {
-      if (!currentBusiness) return "Good experience overall.";
-
-      const options = [
-        `I had a good experience with ${currentBusiness.name}. Everything went smoothly and felt easy to deal with.`,
-        `${currentBusiness.name} was easy to work with and handled everything well. I would recommend them.`,
-        `Overall, I had a solid experience with ${currentBusiness.name}. The service was professional and simple.`
-      ];
-
-      return random(options);
     }
 
     async function copyReview() {
       const text = document.getElementById("reviewText").value;
 
-      try {
-        await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(text);
 
-        const btn = document.querySelector(".copy-btn");
-        btn.innerText = "Copied ✓";
+      const btn = document.querySelector(".copy-btn");
+      btn.innerText = "Copied ✓";
 
-        setTimeout(() => {
-          btn.innerText = "Copy Suggested Review";
-        }, 1500);
+      setTimeout(() => {
+        btn.innerText = "Copy Suggested Review";
+      }, 1500);
 
-        await logActivity("copy");
-
-      } catch (error) {
-        alert("Copy failed. Hold down on the text and copy manually.");
-      }
+      await logActivity("copy");
     }
 
     loadBusiness();
