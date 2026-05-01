@@ -26,7 +26,7 @@
 
     <p>Here’s an AI-generated review suggestion. Please edit it so it matches your real experience.</p>
 
-    <textarea id="reviewText" placeholder="Generating review..."></textarea>
+    <textarea id="reviewText" placeholder="Loading review..."></textarea>
 
     <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
@@ -170,11 +170,13 @@
       if (!currentBusiness) return;
 
       const reviewBox = document.getElementById("reviewText");
-      reviewBox.value = "Generating AI review...";
+
+      // Shows instantly so the user is not waiting on AI
+      reviewBox.value = fallbackReview();
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        const timeout = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch("/api/generate-review", {
           method: "POST",
@@ -192,11 +194,13 @@
         clearTimeout(timeout);
 
         const data = await response.json();
-        reviewBox.value = data.review || fallbackReview();
+
+        if (data.review && !data.review.startsWith("API error")) {
+          reviewBox.value = data.review;
+        }
 
       } catch (error) {
         console.error("AI error:", error);
-        reviewBox.value = fallbackReview();
       }
     }
 
@@ -205,8 +209,8 @@
 
       const options = [
         `I had a good experience with ${currentBusiness.name}. Everything went smoothly and felt easy to deal with.`,
-        `${currentBusiness.name} was easy to work with and handled everything well. No complaints from me.`,
-        `Overall a solid experience with ${currentBusiness.name}. Things were handled professionally and without issues.`
+        `${currentBusiness.name} was easy to work with and handled everything well. I would recommend them.`,
+        `Overall, I had a solid experience with ${currentBusiness.name}. The service was professional and simple.`
       ];
 
       return random(options);
