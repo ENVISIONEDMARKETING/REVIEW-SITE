@@ -13,6 +13,7 @@
     button, a { display:block; width:100%; padding:15px; margin-top:15px; color:white; text-align:center; border:none; border-radius:10px; font-size:16px; font-weight:bold; text-decoration:none; box-sizing:border-box; cursor:pointer; }
     .green-btn { background:#1db954; }
     .blue-btn { background:#0b57d0; }
+    .gray-btn { background:#777; pointer-events:none; opacity:.75; }
     .note { font-size:14px; color:#555; margin-top:14px; text-align:center; }
   </style>
 </head>
@@ -26,7 +27,7 @@
 
     <p>Here’s an AI-generated review suggestion. Please edit it so it matches your real experience.</p>
 
-    <textarea id="reviewText" placeholder="Generating review..."></textarea>
+    <textarea id="reviewText" placeholder="Loading review..."></textarea>
 
     <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
@@ -62,6 +63,7 @@
     document.getElementById("employeeTag").innerText = "Employee Tracking ID: " + employeeId;
 
     let currentBusiness = null;
+    let limitReached = false;
 
     function random(arr) {
       return arr[Math.floor(Math.random() * arr.length)];
@@ -81,6 +83,48 @@
       const pastDays = Math.floor((now - firstDay) / 86400000);
       const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
       return now.getFullYear() + "-W" + weekNumber;
+    }
+
+    async function getVerifiedCounts() {
+      const snap = await db.collection("activityLogs")
+        .where("businessId", "==", currentBusiness.id)
+        .where("type", "==", "verifiedReview")
+        .get();
+
+      let todayCount = 0;
+      let monthCount = 0;
+
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (data.date === getTodayDate()) todayCount++;
+        if (data.month === getMonthKey()) monthCount++;
+      });
+
+      return { todayCount, monthCount };
+    }
+
+    async function checkLimitsAndUpdateButton() {
+      const counts = await getVerifiedCounts();
+
+      const monthlyLimit = Number(currentBusiness.monthlyLimit || 30);
+      const dailyLimit = Number(currentBusiness.dailyLimit || 1);
+
+      const reviewBtn = document.getElementById("googleReviewLink");
+
+      if (counts.todayCount >= dailyLimit || counts.monthCount >= monthlyLimit || currentBusiness.active === false) {
+        limitReached = true;
+        reviewBtn.href = "#";
+        reviewBtn.classList.remove("green-btn");
+        reviewBtn.classList.add("gray-btn");
+        reviewBtn.innerText = "Review Limit Reached";
+        document.getElementById("reviewText").value = "This business has reached its review limit for now.";
+      } else {
+        limitReached = false;
+        reviewBtn.href = currentBusiness.reviewLink;
+        reviewBtn.classList.remove("gray-btn");
+        reviewBtn.classList.add("green-btn");
+        reviewBtn.innerText = "Open Google Review Page";
+      }
     }
 
     async function logActivity(type) {
@@ -114,10 +158,8 @@
             return;
           }
 
-          currentBusiness = {
-            id: docRef.id,
-            ...docRef.data()
-          };
+          currentBusiness = { id: docRef.id, ...docRef.data() };
+
         } else {
           const snapshot = await db.collection("businesses").get();
 
@@ -146,7 +188,7 @@
         reviewBtn.href = currentBusiness.reviewLink;
 
         reviewBtn.addEventListener("click", function () {
-          logActivity("googleClick");
+          if (!limitReached) logActivity("googleClick");
         });
 
         await logActivity("scan");
@@ -158,7 +200,9 @@
           localStorage.setItem(uniqueKey, "true");
         }
 
-        generateReview();
+        await checkLimitsAndUpdateButton();
+
+        if (!limitReached) generateReview();
 
       } catch (error) {
         document.getElementById("businessName").innerText = "Firebase Error";
@@ -167,20 +211,19 @@
     }
 
     async function generateReview() {
-      if (!currentBusiness) return;
+      if (!currentBusiness || limitReached) return;
 
       const reviewBox = document.getElementById("reviewText");
-      reviewBox.value = "Generating AI review...";
+
+      reviewBox.value = fallbackReview();
 
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        const timeout = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch("/api/generate-review", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
             name: currentBusiness.name || "this business",
@@ -192,11 +235,13 @@
         clearTimeout(timeout);
 
         const data = await response.json();
-        reviewBox.value = data.review || fallbackReview();
+
+        if (data.review && !data.review.startsWith("API error")) {
+          reviewBox.value = data.review;
+        }
 
       } catch (error) {
         console.error("AI error:", error);
-        reviewBox.value = fallbackReview();
       }
     }
 
@@ -205,8 +250,8 @@
 
       const options = [
         `I had a good experience with ${currentBusiness.name}. Everything went smoothly and felt easy to deal with.`,
-        `${currentBusiness.name} was easy to work with and handled everything well. No complaints from me.`,
-        `Overall a solid experience with ${currentBusiness.name}. Things were handled professionally and without issues.`
+        `${currentBusiness.name} was easy to work with and handled everything well. I would recommend them.`,
+        `Overall, I had a solid experience with ${currentBusiness.name}. The service was professional and simple.`
       ];
 
       return random(options);
