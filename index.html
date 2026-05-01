@@ -32,12 +32,6 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
 
-    h1 {
-      font-size: 26px;
-      text-align: center;
-      margin-top: 0;
-    }
-
     textarea {
       width: 100%;
       height: 155px;
@@ -45,7 +39,6 @@
       padding: 12px;
       border-radius: 10px;
       border: 1px solid #ccc;
-      box-sizing: border-box;
     }
 
     button, a {
@@ -55,23 +48,22 @@
       margin-top: 15px;
       color: white;
       text-align: center;
-      border: none;
       border-radius: 10px;
-      font-size: 16px;
       font-weight: bold;
       text-decoration: none;
-      box-sizing: border-box;
       cursor: pointer;
     }
 
     .green-btn { background: #1db954; }
     .blue-btn { background: #0b57d0; }
 
-    .note {
-      font-size: 14px;
-      color: #555;
-      margin-top: 14px;
-      text-align: center;
+    .limit-box {
+      background:#f2f2f2;
+      padding:10px;
+      border-radius:10px;
+      text-align:center;
+      margin-top:12px;
+      font-size:13px;
     }
   </style>
 </head>
@@ -81,184 +73,131 @@
   <div class="company-name" id="businessName">Loading...</div>
 
   <div class="card">
-    <h1>Leave Us a Google Review</h1>
 
-    <p>Here’s an AI-generated review suggestion. Please edit it so it matches your real experience.</p>
+    <textarea id="reviewText"></textarea>
 
-    <textarea id="reviewText" placeholder="Generating review..."></textarea>
+    <button class="green-btn" onclick="generateReview()">Generate Review</button>
+    <button class="blue-btn" onclick="copyReview()">Copy Review</button>
 
-    <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
-    <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
-
-    <a id="googleReviewLink" class="green-btn" href="#" target="_blank" rel="noopener noreferrer">
-      Open Google Review Page
+    <a id="googleReviewLink" class="green-btn" href="#" onclick="handleClick(event)">
+      Leave Google Review
     </a>
 
-    <p class="note">Please only leave an honest review based on your real experience.</p>
-    <p class="note" id="employeeTag"></p>
+    <div class="limit-box" id="limitBox"></div>
+
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-      authDomain: "envisionedmktng.firebaseapp.com",
-      projectId: "envisionedmktng",
-      storageBucket: "envisionedmktng.firebasestorage.app",
-      messagingSenderId: "1075132261537",
-      appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
-    };
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "envisionedmktng.firebaseapp.com",
+  projectId: "envisionedmktng"
+};
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-    const params = new URLSearchParams(window.location.search);
-    const employeeId = params.get("employee") || "default";
-    const businessIdFromUrl = params.get("business");
+const params = new URLSearchParams(window.location.search);
+const businessId = params.get("business");
 
-    document.getElementById("employeeTag").innerText = "Employee Tracking ID: " + employeeId;
+let currentBusiness = null;
 
-    let currentBusiness = null;
+function today() {
+  return new Date().toISOString().split("T")[0];
+}
 
-    function random(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
+function month() {
+  return new Date().toISOString().slice(0,7);
+}
 
-    function slugify(text) {
-      return String(text)
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-    }
+function dailyLimit(monthly) {
+  return Math.ceil((monthly || 30) / 30);
+}
 
-    async function loadBusiness() {
-      try {
-        if (businessIdFromUrl) {
-          const docRef = await db.collection("businesses").doc(businessIdFromUrl).get();
+async function loadBusiness() {
+  const doc = await db.collection("businesses").doc(businessId).get();
 
-          if (!docRef.exists) {
-            document.getElementById("businessName").innerText = "Business Not Found";
-            document.getElementById("reviewText").value = "No business found for: " + businessIdFromUrl;
-            return;
-          }
+  currentBusiness = { id: doc.id, ...doc.data() };
 
-          currentBusiness = {
-            id: docRef.id,
-            ...docRef.data()
-          };
+  document.getElementById("businessName").innerText = currentBusiness.name;
 
-          if (!currentBusiness.reviewLink) {
-            document.getElementById("businessName").innerText = currentBusiness.name || "Missing Review Link";
-            document.getElementById("reviewText").value = "This business is missing a Google review link.";
-            return;
-          }
+  await resetCounts();
+  updateUI();
+  generateReview();
+}
 
-          startReviewPage();
-          return;
-        }
+async function resetCounts() {
+  const ref = db.collection("businesses").doc(currentBusiness.id);
 
-        const snapshot = await db.collection("businesses").get();
+  if (currentBusiness.lastResetDate !== today()) {
+    await ref.update({
+      todayCount: 0,
+      lastResetDate: today()
+    });
+    currentBusiness.todayCount = 0;
+  }
 
-        const businesses = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(b => b.active !== false && b.reviewLink);
+  if (currentBusiness.monthKey !== month()) {
+    await ref.update({
+      currentMonthCount: 0,
+      monthKey: month()
+    });
+    currentBusiness.currentMonthCount = 0;
+  }
+}
 
-        if (!businesses.length) {
-          document.getElementById("businessName").innerText = "No Businesses Found";
-          document.getElementById("reviewText").value = "Add businesses in admin.html first.";
-          return;
-        }
+function updateUI() {
+  const m = currentBusiness.monthlyLimit || 30;
+  const d = currentBusiness.dailyLimit || dailyLimit(m);
 
-        currentBusiness = random(businesses);
-        startReviewPage();
+  document.getElementById("limitBox").innerText =
+    `${currentBusiness.currentMonthCount || 0}/${m} this month • ${currentBusiness.todayCount || 0}/${d} today`;
+}
 
-      } catch (error) {
-        document.getElementById("businessName").innerText = "Firebase Error";
-        document.getElementById("reviewText").value = error.message;
-      }
-    }
+async function handleClick(e) {
+  e.preventDefault();
 
-    async function generateReview() {
-      if (!currentBusiness) return;
+  const m = currentBusiness.monthlyLimit || 30;
+  const d = currentBusiness.dailyLimit || dailyLimit(m);
 
-      const reviewBox = document.getElementById("reviewText");
-      reviewBox.value = "Generating AI review...";
+  if ((currentBusiness.todayCount || 0) >= d) {
+    alert("Daily limit reached");
+    return;
+  }
 
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+  if ((currentBusiness.currentMonthCount || 0) >= m) {
+    alert("Monthly limit reached");
+    return;
+  }
 
-        const response = await fetch("/api/generate-review", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            name: currentBusiness.name || "this business",
-            industry: currentBusiness.industry || "business",
-            service: currentBusiness.service || currentBusiness.industry || "service"
-          })
-        });
+  await db.collection("businesses").doc(currentBusiness.id).update({
+    todayCount: firebase.firestore.FieldValue.increment(1),
+    currentMonthCount: firebase.firestore.FieldValue.increment(1)
+  });
 
-        clearTimeout(timeout);
+  currentBusiness.todayCount++;
+  currentBusiness.currentMonthCount++;
 
-        const data = await response.json();
+  updateUI();
 
-        reviewBox.value = data.review || fallbackReview();
+  window.open(currentBusiness.reviewLink, "_blank");
+}
 
-      } catch (error) {
-        console.error("AI error:", error);
-        reviewBox.value = fallbackReview();
-      }
-    }
+function generateReview() {
+  document.getElementById("reviewText").value =
+    "Great experience, highly recommend!";
+}
 
-    function fallbackReview() {
-      if (!currentBusiness) {
-        return "Good experience overall.";
-      }
+async function copyReview() {
+  const text = document.getElementById("reviewText").value;
+  await navigator.clipboard.writeText(text);
+}
 
-      const options = [
-        `I had a good experience with ${currentBusiness.name}. Everything went smoothly and felt easy to deal with.`,
-        `${currentBusiness.name} was easy to work with and handled everything well. No complaints from me.`,
-        `Overall a solid experience with ${currentBusiness.name}. Things were handled professionally and without issues.`
-      ];
-
-      return random(options);
-    }
-
-    async function copyReview() {
-      const text = document.getElementById("reviewText").value;
-
-      try {
-        await navigator.clipboard.writeText(text);
-
-        const btn = document.querySelector(".copy-btn");
-        btn.innerText = "Copied ✓";
-
-        setTimeout(() => {
-          btn.innerText = "Copy Suggested Review";
-        }, 1500);
-
-      } catch (error) {
-        alert("Copy failed. Hold down on the text and copy manually.");
-      }
-    }
-
-    function startReviewPage() {
-      document.getElementById("businessName").innerText = currentBusiness.name;
-
-      const reviewBtn = document.getElementById("googleReviewLink");
-      reviewBtn.href = currentBusiness.reviewLink;
-
-      generateReview();
-    }
-
-    loadBusiness();
-  </script>
+loadBusiness();
+</script>
 
 </body>
 </html>
