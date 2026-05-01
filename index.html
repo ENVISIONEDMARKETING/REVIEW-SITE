@@ -31,7 +31,7 @@
     <button class="green-btn" onclick="generateReview()">Generate New AI Review</button>
     <button class="blue-btn copy-btn" onclick="copyReview()">Copy Suggested Review</button>
 
-    <a id="googleReviewLink" class="green-btn" href="#" target="_blank" rel="noopener noreferrer" onclick="logGoogleClick()">
+    <a id="googleReviewLink" class="green-btn" href="#" target="_blank" rel="noopener noreferrer">
       Open Google Review Page
     </a>
 
@@ -83,6 +83,26 @@
       return now.getFullYear() + "-W" + weekNumber;
     }
 
+    async function logActivity(type) {
+      if (!currentBusiness) return;
+
+      try {
+        await db.collection("activityLogs").add({
+          type,
+          employeeId,
+          businessId: currentBusiness.id,
+          businessName: currentBusiness.name,
+          industry: currentBusiness.industry || "business",
+          date: getTodayDate(),
+          week: getWeekKey(),
+          month: getMonthKey(),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (error) {
+        console.log("Log error:", error.message);
+      }
+    }
+
     async function loadBusiness() {
       try {
         if (businessIdFromUrl) {
@@ -98,7 +118,6 @@
             id: docRef.id,
             ...docRef.data()
           };
-
         } else {
           const snapshot = await db.collection("businesses").get();
 
@@ -121,7 +140,25 @@
           return;
         }
 
-        startReviewPage();
+        document.getElementById("businessName").innerText = currentBusiness.name;
+
+        const reviewBtn = document.getElementById("googleReviewLink");
+        reviewBtn.href = currentBusiness.reviewLink;
+
+        reviewBtn.addEventListener("click", function () {
+          logActivity("googleClick");
+        });
+
+        await logActivity("scan");
+
+        const uniqueKey = "unique_" + employeeId + "_" + currentBusiness.id + "_" + getTodayDate();
+
+        if (!localStorage.getItem(uniqueKey)) {
+          await logActivity("uniqueScan");
+          localStorage.setItem(uniqueKey, "true");
+        }
+
+        generateReview();
 
       } catch (error) {
         document.getElementById("businessName").innerText = "Firebase Error";
@@ -141,7 +178,9 @@
 
         const response = await fetch("/api/generate-review", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json"
+          },
           signal: controller.signal,
           body: JSON.stringify({
             name: currentBusiness.name || "this business",
@@ -173,26 +212,6 @@
       return random(options);
     }
 
-    async function logActivity(type) {
-      if (!currentBusiness) return;
-
-      try {
-        await db.collection("activityLogs").add({
-          type,
-          employeeId,
-          businessId: currentBusiness.id,
-          businessName: currentBusiness.name,
-          industry: currentBusiness.industry || "business",
-          date: getTodayDate(),
-          week: getWeekKey(),
-          month: getMonthKey(),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } catch (error) {
-        console.log("Log error:", error.message);
-      }
-    }
-
     async function copyReview() {
       const text = document.getElementById("reviewText").value;
 
@@ -211,33 +230,6 @@
       } catch (error) {
         alert("Copy failed. Hold down on the text and copy manually.");
       }
-    }
-
-    function logGoogleClick() {
-      logActivity("googleClick");
-    }
-
-    async function trackScan() {
-      if (!currentBusiness) return;
-
-      await logActivity("scan");
-
-      const uniqueKey = "unique_" + employeeId + "_" + currentBusiness.id + "_" + getTodayDate();
-
-      if (!localStorage.getItem(uniqueKey)) {
-        await logActivity("uniqueScan");
-        localStorage.setItem(uniqueKey, "true");
-      }
-    }
-
-    function startReviewPage() {
-      document.getElementById("businessName").innerText = currentBusiness.name;
-
-      const reviewBtn = document.getElementById("googleReviewLink");
-      reviewBtn.href = currentBusiness.reviewLink;
-
-      generateReview();
-      trackScan();
     }
 
     loadBusiness();
