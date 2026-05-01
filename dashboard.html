@@ -6,168 +6,66 @@
 
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial;
       margin: 0;
       background: #f3f4f6;
-      color: #111;
     }
 
     header {
-      background: linear-gradient(135deg, #000, #1c1c1c);
+      background: #111;
       color: white;
-      padding: 30px 22px;
+      padding: 25px;
       text-align: center;
     }
 
-    header h1 {
-      margin: 0;
-      font-size: 28px;
-      letter-spacing: .5px;
-    }
-
-    header p {
-      margin: 8px 0 0;
-      color: #d1d1d1;
-    }
-
     main {
-      padding: 24px;
-      max-width: 1250px;
+      padding: 20px;
+      max-width: 1200px;
       margin: auto;
-      display: none;
-    }
-
-    .topbar {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin: 22px 0;
-      align-items: center;
-    }
-
-    input, select {
-      padding: 12px;
-      border-radius: 12px;
-      border: 1px solid #d7d7d7;
-      background: #fff;
-      min-width: 220px;
-      box-sizing: border-box;
-    }
-
-    button, a.btn {
-      background: #111;
-      color: white;
-      border: 0;
-      padding: 12px 15px;
-      border-radius: 12px;
-      text-decoration: none;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-block;
-      transition: .2s ease;
-    }
-
-    button:hover, a.btn:hover {
-      opacity: .85;
-      transform: translateY(-1px);
-    }
-
-    .danger { background:#b00020; }
-    .gray { background:#777; }
-    .green { background:#1db954; }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 16px;
-      margin: 24px 0;
     }
 
     .card {
       background: white;
-      padding: 22px;
-      border-radius: 18px;
-      box-shadow: 0 12px 28px rgba(0,0,0,.06);
-      border: 1px solid rgba(0,0,0,.04);
-    }
-
-    .label {
-      color: #666;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      font-weight: 700;
-    }
-
-    .number {
-      font-size: 36px;
-      font-weight: 900;
-      margin-top: 8px;
+      padding: 20px;
+      border-radius: 16px;
+      margin-top: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.08);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
-      border-radius: 18px;
-      overflow: hidden;
-      box-shadow: 0 12px 28px rgba(0,0,0,.06);
-      margin-top: 16px;
+      margin-top: 15px;
     }
 
     th, td {
-      padding: 14px;
+      padding: 12px;
       border-bottom: 1px solid #eee;
       text-align: left;
-      font-size: 14px;
-      vertical-align: top;
     }
 
     th {
       background: #111;
       color: white;
-      text-transform: uppercase;
-      letter-spacing: .7px;
-      font-size: 12px;
     }
 
-    tr:hover {
-      background: #fafafa;
+    button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      margin-top: 5px;
     }
 
-    .section-title {
-      margin-top: 34px;
-      margin-bottom: 10px;
-      font-size: 21px;
-    }
+    .green { background:#1db954; color:white; }
+    .gray { background:#777; color:white; }
+    .danger { background:#b00020; color:white; }
 
-    .small {
-      font-size: 12px;
-      color: #777;
-      word-break: break-all;
-    }
-
-    #checking {
-      padding: 40px;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .employee-form {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .employee-form input {
-      flex: 1;
-    }
-
-    @media (max-width: 700px) {
-      main { padding: 16px; }
-      table { display: block; overflow-x: auto; }
-      input, select, button, a.btn { width: 100%; }
+    input {
+      padding: 6px;
+      width: 70px;
+      border-radius: 6px;
+      border:1px solid #ccc;
     }
   </style>
 </head>
@@ -176,415 +74,141 @@
 
 <header>
   <h1>ENVISIONED MARKETING Dashboard</h1>
-  <p>Employee review activity by day, week, and month</p>
+  <p>Verified Google Review Tracking System</p>
 </header>
 
-<div id="checking">Checking dashboard access...</div>
+<main>
 
-<main id="mainContent">
+<div class="card">
+  <h2>Business Review Control</h2>
 
-  <div class="topbar">
-    <select id="timeFilter" onchange="render()">
-      <option value="today">Today</option>
-      <option value="week">This Week</option>
-      <option value="month">This Month</option>
-      <option value="all">All Logged Activity</option>
-    </select>
-
-    <input id="filter" placeholder="Filter by employee or business..." oninput="render()" />
-
-    <button onclick="loadStats()">Refresh Stats</button>
-    <a class="btn" href="./admin.html">Manage Businesses</a>
-    <a class="btn" href="./employee.html">Employee Page</a>
-    <a class="btn" href="./">Review Page</a>
-    <button class="danger" onclick="logoutAdmin()">Logout</button>
-  </div>
-
-  <div class="grid">
-    <div class="card"><div class="label">Scans</div><div class="number" id="totalScans">0</div></div>
-    <div class="card"><div class="label">Unique Scans</div><div class="number" id="totalUnique">0</div></div>
-    <div class="card"><div class="label">Reviews Copied</div><div class="number" id="totalCopied">0</div></div>
-    <div class="card"><div class="label">Google Review Clicks</div><div class="number" id="totalClicks">0</div></div>
-  </div>
-
-  <h2 class="section-title">Add Employee</h2>
-  <div class="card">
-    <div class="employee-form">
-      <input id="newEmployeeName" placeholder="Employee display name" />
-      <input id="newEmployeeEmail" placeholder="Employee email" />
-      <button class="green" onclick="addEmployee()">Add Employee</button>
-    </div>
-    <p class="small">This adds them to your dashboard list. They still need to create/login with this email on the employee login page.</p>
-  </div>
-
-  <h2 class="section-title">Manage Employees</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Current Name</th>
-        <th>Email</th>
-        <th>Hidden Firebase ID</th>
-        <th>Edit</th>
-        <th>Status</th>
-        <th>Remove</th>
-      </tr>
-    </thead>
-    <tbody id="employeeManageBody"></tbody>
-  </table>
-
-  <h2 class="section-title">Employee Performance</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Employee</th>
-        <th>Scans</th>
-        <th>Unique Scans</th>
-        <th>Reviews Copied</th>
-        <th>Google Clicks</th>
-      </tr>
-    </thead>
-    <tbody id="employeeBody"></tbody>
-  </table>
-
-  <h2 class="section-title">Business Performance</h2>
   <table>
     <thead>
       <tr>
         <th>Business</th>
-        <th>Scans</th>
-        <th>Unique Scans</th>
-        <th>Reviews Copied</th>
-        <th>Google Clicks</th>
+        <th>Verified Reviews</th>
+        <th>Monthly Limit</th>
+        <th>Actions</th>
       </tr>
     </thead>
-    <tbody id="businessBody"></tbody>
+
+    <tbody id="businessTable"></tbody>
   </table>
 
-  <h2 class="section-title">Employee + Business Breakdown</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Employee</th>
-        <th>Business</th>
-        <th>Scans</th>
-        <th>Unique Scans</th>
-        <th>Reviews Copied</th>
-        <th>Google Clicks</th>
-      </tr>
-    </thead>
-    <tbody id="breakdownBody"></tbody>
-  </table>
+</div>
 
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyAgzDPYlzuht6cFbWGUQgPiHWHkyG-y3yw",
-    authDomain: "envisionedmktng.firebaseapp.com",
-    projectId: "envisionedmktng",
-    storageBucket: "envisionedmktng.firebasestorage.app",
-    messagingSenderId: "1075132261537",
-    appId: "1:1075132261537:web:2c283114b82d1cee4efce0"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "envisionedmktng.firebaseapp.com",
+  projectId: "envisionedmktng"
+};
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-  const ADMIN_EMAILS = [
-    "johnvarela1025@gmail.com"
-  ];
+function getMonthKey() {
+  return new Date().toISOString().slice(0,7);
+}
 
-  let logs = [];
-  let employeesMap = {};
+async function loadDashboard() {
 
-  auth.onAuthStateChanged(async function(user) {
-    if (!user) {
-      window.location.href = "admin-login.html";
-      return;
-    }
+  const businessesSnap = await db.collection("businesses").get();
+  const logsSnap = await db.collection("activityLogs").get();
 
-    if (!ADMIN_EMAILS.includes(user.email.toLowerCase().trim())) {
-      alert("You do not have access to the main dashboard.");
-      window.location.href = "employee.html";
-      return;
-    }
+  const logs = logsSnap.docs.map(d => d.data());
 
-    document.getElementById("checking").style.display = "none";
-    document.getElementById("mainContent").style.display = "block";
+  const rows = [];
 
-    await loadStats();
+  businessesSnap.forEach(doc => {
+    const b = { id: doc.id, ...doc.data() };
+
+    const verifiedCount = logs.filter(l =>
+      l.businessId === b.id &&
+      l.type === "verifiedReview" &&
+      l.month === getMonthKey()
+    ).length;
+
+    rows.push({ ...b, verifiedCount });
   });
 
-  function getTodayDate() {
-    return new Date().toISOString().split("T")[0];
-  }
+  document.getElementById("businessTable").innerHTML = rows.map(b => `
+    <tr>
+      <td><strong>${b.name || b.id}</strong></td>
 
-  function getMonthKey() {
-    return new Date().toISOString().slice(0, 7);
-  }
+      <td>${b.verifiedCount}</td>
 
-  function getWeekKey() {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), 0, 1);
-    const pastDays = Math.floor((now - firstDay) / 86400000);
-    const weekNumber = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
-    return now.getFullYear() + "-W" + weekNumber;
-  }
+      <td>
+        <input id="limit_${b.id}" value="${b.monthlyLimit || 30}" />
+        <button onclick="saveLimit('${b.id}')">Save</button>
+      </td>
 
-  function emptyStats() {
-    return { scans: 0, uniqueScans: 0, copiedReviews: 0, reviewClicks: 0 };
-  }
+      <td>
+        <button class="green" onclick="addVerified('${b.id}','${b.name}')">
+          + Verified
+        </button>
 
-  function countLog(stats, type) {
-    if (type === "scan") stats.scans++;
-    if (type === "uniqueScan") stats.uniqueScans++;
-    if (type === "copy" || type === "copiedReview") stats.copiedReviews++;
-    if (type === "googleClick") stats.reviewClicks++;
-  }
+        <button class="gray" onclick="resetMonth('${b.id}')">
+          Reset
+        </button>
+      </td>
+    </tr>
+  `).join("");
+}
 
-  function getEmployeeDisplayName(employeeId) {
-    const employee = employeesMap[employeeId];
-    if (!employee) return employeeId;
-    return employee.employeeName || employee.name || employee.email || employeeId;
-  }
+async function saveLimit(id) {
+  const val = document.getElementById("limit_" + id).value;
 
-  async function loadEmployees() {
-    const snapshot = await db.collection("employees").get();
-    employeesMap = {};
+  await db.collection("businesses").doc(id).set({
+    monthlyLimit: Number(val)
+  }, { merge:true });
 
-    snapshot.forEach(doc => {
-      employeesMap[doc.id] = { id: doc.id, ...doc.data() };
-    });
+  alert("Limit updated");
+}
 
-    renderEmployeeManager();
-  }
+async function addVerified(businessId, name) {
 
-  async function addEmployee() {
-    const name = document.getElementById("newEmployeeName").value.trim();
-    const email = document.getElementById("newEmployeeEmail").value.trim();
+  await db.collection("activityLogs").add({
+    type: "verifiedReview",
+    businessId,
+    businessName: name,
+    date: new Date().toISOString().split("T")[0],
+    month: getMonthKey(),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
 
-    if (!name || !email) {
-      alert("Enter employee name and email.");
-      return;
-    }
+  alert("Verified review added");
 
-    const id = "manual_" + email.toLowerCase().replace(/[^a-z0-9]/g, "_");
+  loadDashboard();
+}
 
-    await db.collection("employees").doc(id).set({
-      employeeName: name,
-      email,
-      active: true,
-      manual: true,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+async function resetMonth(businessId) {
 
-    document.getElementById("newEmployeeName").value = "";
-    document.getElementById("newEmployeeEmail").value = "";
+  if (!confirm("Reset this month's verified reviews?")) return;
 
-    await loadStats();
-    alert("Employee added.");
-  }
+  const snap = await db.collection("activityLogs")
+    .where("businessId","==",businessId)
+    .where("month","==",getMonthKey())
+    .where("type","==","verifiedReview")
+    .get();
 
-  function renderEmployeeManager() {
-    const rows = Object.values(employeesMap);
+  const batch = db.batch();
 
-    document.getElementById("employeeManageBody").innerHTML =
-      rows.map(employee => {
-        const displayName = employee.employeeName || employee.name || employee.email || "Unnamed Employee";
-        const active = employee.active !== false;
+  snap.forEach(doc => batch.delete(doc.ref));
 
-        return `
-          <tr>
-            <td><strong>${displayName}</strong></td>
-            <td><input id="email_${employee.id}" value="${employee.email || ""}" /></td>
-            <td><div class="small">${employee.id}</div></td>
-            <td>
-              <input id="rename_${employee.id}" value="${displayName}" />
-              <button onclick="saveEmployee('${employee.id}')">Save</button>
-            </td>
-            <td>
-              ${active ? "Active" : "Disabled"}<br>
-              <button class="gray" onclick="toggleEmployee('${employee.id}', ${active})">
-                ${active ? "Disable" : "Enable"}
-              </button>
-            </td>
-            <td><button class="danger" onclick="deleteEmployee('${employee.id}')">Delete</button></td>
-          </tr>
-        `;
-      }).join("") || `<tr><td colspan="6">No employees found yet.</td></tr>`;
-  }
+  await batch.commit();
 
-  async function saveEmployee(employeeId) {
-    const name = document.getElementById("rename_" + employeeId).value.trim();
-    const email = document.getElementById("email_" + employeeId).value.trim();
+  alert("Reset complete");
 
-    if (!name) {
-      alert("Enter a name first.");
-      return;
-    }
+  loadDashboard();
+}
 
-    await db.collection("employees").doc(employeeId).set({
-      employeeName: name,
-      email,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    await loadStats();
-    alert("Employee updated.");
-  }
-
-  async function toggleEmployee(employeeId, currentActive) {
-    await db.collection("employees").doc(employeeId).set({
-      active: !currentActive,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    await loadStats();
-  }
-
-  async function deleteEmployee(employeeId) {
-    const confirmed = confirm("Delete this employee from dashboard records?\n\nThis also removes their activity logs.");
-    if (!confirmed) return;
-
-    await db.collection("employees").doc(employeeId).delete();
-
-    const logsSnapshot = await db.collection("activityLogs")
-      .where("employeeId", "==", employeeId)
-      .get();
-
-    const batch = db.batch();
-
-    logsSnapshot.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-
-    await batch.commit();
-
-    await loadStats();
-    alert("Employee deleted from dashboard.");
-  }
-
-  async function loadStats() {
-    await loadEmployees();
-
-    const snapshot = await db.collection("activityLogs").get();
-
-    logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    render();
-  }
-
-  function getFilteredLogs() {
-    const timeFilter = document.getElementById("timeFilter").value;
-    const search = document.getElementById("filter").value.toLowerCase();
-
-    const todayKey = getTodayDate();
-    const weekKey = getWeekKey();
-    const monthKey = getMonthKey();
-
-    return logs.filter(log => {
-      let matchesTime = true;
-
-      if (timeFilter === "today") matchesTime = log.date === todayKey;
-      if (timeFilter === "week") matchesTime = log.week === weekKey;
-      if (timeFilter === "month") matchesTime = log.month === monthKey;
-
-      const employeeName = getEmployeeDisplayName(log.employeeId);
-
-      const matchesSearch =
-        String(employeeName || "").toLowerCase().includes(search) ||
-        String(log.employeeId || "").toLowerCase().includes(search) ||
-        String(log.businessName || "").toLowerCase().includes(search) ||
-        String(log.businessId || "").toLowerCase().includes(search);
-
-      return matchesTime && matchesSearch;
-    });
-  }
-
-  function render() {
-    const filtered = getFilteredLogs();
-
-    const totals = emptyStats();
-    const employees = {};
-    const businesses = {};
-    const breakdown = {};
-
-    filtered.forEach(log => {
-      countLog(totals, log.type);
-
-      const employeeId = log.employeeId || "Unknown Employee";
-      const employeeName = getEmployeeDisplayName(employeeId);
-      const businessName = log.businessName || log.businessId || "Unknown Business";
-      const businessId = log.businessId || businessName;
-      const breakdownKey = employeeId + "__" + businessId;
-
-      if (!employees[employeeId]) employees[employeeId] = { employeeName, employeeId, ...emptyStats() };
-      if (!businesses[businessName]) businesses[businessName] = emptyStats();
-      if (!breakdown[breakdownKey]) breakdown[breakdownKey] = { employeeName, employeeId, businessName, ...emptyStats() };
-
-      countLog(employees[employeeId], log.type);
-      countLog(businesses[businessName], log.type);
-      countLog(breakdown[breakdownKey], log.type);
-    });
-
-    document.getElementById("totalScans").innerText = totals.scans;
-    document.getElementById("totalUnique").innerText = totals.uniqueScans;
-    document.getElementById("totalCopied").innerText = totals.copiedReviews;
-    document.getElementById("totalClicks").innerText = totals.reviewClicks;
-
-    document.getElementById("employeeBody").innerHTML =
-      Object.values(employees).map(s => `
-        <tr>
-          <td><strong>${s.employeeName}</strong><div class="small">${s.employeeId}</div></td>
-          <td>${s.scans}</td>
-          <td>${s.uniqueScans}</td>
-          <td>${s.copiedReviews}</td>
-          <td>${s.reviewClicks}</td>
-        </tr>
-      `).join("") || `<tr><td colspan="5">No employee activity found.</td></tr>`;
-
-    document.getElementById("businessBody").innerHTML =
-      Object.entries(businesses).map(([businessName, s]) => `
-        <tr>
-          <td>${businessName}</td>
-          <td>${s.scans}</td>
-          <td>${s.uniqueScans}</td>
-          <td>${s.copiedReviews}</td>
-          <td>${s.reviewClicks}</td>
-        </tr>
-      `).join("") || `<tr><td colspan="5">No business activity found.</td></tr>`;
-
-    document.getElementById("breakdownBody").innerHTML =
-      Object.values(breakdown).map(row => `
-        <tr>
-          <td><strong>${row.employeeName}</strong><div class="small">${row.employeeId}</div></td>
-          <td>${row.businessName}</td>
-          <td>${row.scans}</td>
-          <td>${row.uniqueScans}</td>
-          <td>${row.copiedReviews}</td>
-          <td>${row.reviewClicks}</td>
-        </tr>
-      `).join("") || `<tr><td colspan="6">No breakdown activity found.</td></tr>`;
-  }
-
-  async function logoutAdmin() {
-    await auth.signOut();
-    window.location.href = "admin-login.html";
-  }
-
-  window.addEmployee = addEmployee;
-  window.saveEmployee = saveEmployee;
-  window.toggleEmployee = toggleEmployee;
-  window.deleteEmployee = deleteEmployee;
-  window.loadStats = loadStats;
-  window.render = render;
-  window.logoutAdmin = logoutAdmin;
+loadDashboard();
 </script>
 
 </body>
