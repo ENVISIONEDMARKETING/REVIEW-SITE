@@ -86,6 +86,8 @@
     }
 
     async function getVerifiedCounts() {
+      if (!currentBusiness) return { todayCount: 0, monthCount: 0 };
+
       const snap = await db.collection("activityLogs")
         .where("businessId", "==", currentBusiness.id)
         .where("type", "==", "verifiedReview")
@@ -167,10 +169,19 @@
             .map(doc => ({ id: doc.id, ...doc.data() }))
             .filter(b => b.active !== false && b.reviewLink);
 
+          if (!businesses.length) {
+            document.getElementById("businessName").innerText = "No Active Businesses";
+            document.getElementById("reviewText").value = "No active business review links are available right now.";
+            document.getElementById("googleReviewLink").href = "#";
+            document.getElementById("googleReviewLink").innerText = "No Review Page Available";
+            document.getElementById("googleReviewLink").classList.add("gray-btn");
+            return;
+          }
+
           currentBusiness = random(businesses);
         }
 
-        document.getElementById("businessName").innerText = currentBusiness.name;
+        document.getElementById("businessName").innerText = currentBusiness.name || "Business";
 
         const reviewBtn = document.getElementById("googleReviewLink");
         reviewBtn.href = currentBusiness.reviewLink;
@@ -180,12 +191,13 @@
         });
 
         await logActivity("scan");
-
         await checkLimitsAndUpdateButton();
 
         if (!limitReached) generateReview();
 
       } catch (error) {
+        console.log(error);
+        document.getElementById("businessName").innerText = "Error";
         document.getElementById("reviewText").value = "Error loading business.";
       }
     }
@@ -194,8 +206,6 @@
       if (!currentBusiness || limitReached) return;
 
       const reviewBox = document.getElementById("reviewText");
-
-      // ✅ FIXED HERE
       reviewBox.value = "Generating AI review...";
 
       try {
