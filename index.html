@@ -57,7 +57,7 @@
 
 <div class="card">
 
-  <textarea id="reviewText" placeholder="Generating review..."></textarea>
+  <textarea id="reviewText"></textarea>
 
   <button class="green" onclick="generateReview()">Generate AI Review</button>
   <button class="blue" onclick="copyReview()">Copy Review</button>
@@ -102,15 +102,11 @@ async function generateReview() {
   box.value = "Generating review...";
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500);
-
     const res = await fetch("/api/generate-review", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      signal: controller.signal,
       body: JSON.stringify({
         name: currentBusiness.name,
         industry: currentBusiness.industry,
@@ -118,19 +114,17 @@ async function generateReview() {
       })
     });
 
-    clearTimeout(timeout);
-
     const data = await res.json();
 
-    if (data.review) {
-      box.value = data.review;
-    } else {
-      box.value = "Tap generate again";
-    }
+    box.value = data.review || fallbackReview();
 
   } catch (e) {
-    box.value = "Tap generate again";
+    box.value = fallbackReview();
   }
+}
+
+function fallbackReview() {
+  return `Great experience with ${currentBusiness.name}. Highly recommend!`;
 }
 
 async function copyReview() {
@@ -144,3 +138,4 @@ loadBusiness();
 
 </body>
 </html>
+Ok this is working however I just want it to generate the ai review faster. Without it having the old generic review present. It can say “generating review” instead of
