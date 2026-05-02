@@ -57,7 +57,7 @@
 
 <div class="card">
 
-  <textarea id="reviewText"></textarea>
+  <textarea id="reviewText" placeholder="Generating review..."></textarea>
 
   <button class="green" onclick="generateReview()">Generate AI Review</button>
   <button class="blue" onclick="copyReview()">Copy Review</button>
@@ -102,11 +102,15 @@ async function generateReview() {
   box.value = "Generating review...";
 
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
     const res = await fetch("/api/generate-review", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
+      signal: controller.signal,
       body: JSON.stringify({
         name: currentBusiness.name,
         industry: currentBusiness.industry,
@@ -114,17 +118,19 @@ async function generateReview() {
       })
     });
 
+    clearTimeout(timeout);
+
     const data = await res.json();
 
-    box.value = data.review || fallbackReview();
+    if (data.review) {
+      box.value = data.review;
+    } else {
+      box.value = "Tap generate again";
+    }
 
   } catch (e) {
-    box.value = fallbackReview();
+    box.value = "Tap generate again";
   }
-}
-
-function fallbackReview() {
-  return `Great experience with ${currentBusiness.name}. Highly recommend!`;
 }
 
 async function copyReview() {
