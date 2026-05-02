@@ -119,8 +119,9 @@
 
       document.getElementById("employeeId").value = user.uid;
 
-      const baseUrl = window.location.origin + "/";
-      const qrLink = baseUrl + "?employee=" + encodeURIComponent(user.uid);
+      // ✅ FIXED LINK (FOR VERCEL)
+      const REVIEW_PAGE = window.location.origin + "/index.html";
+      const qrLink = REVIEW_PAGE + "?employee=" + encodeURIComponent(user.uid);
 
       document.getElementById("qrLink").value = qrLink;
       document.getElementById("openQRLink").href = qrLink;
