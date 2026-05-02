@@ -34,7 +34,7 @@
       <input id="qrLink" readonly />
 
       <button onclick="copyQRLink()">Copy My QR Link</button>
-      <a id="openQRLink" target="_blank">Open My Review Page</a>
+      <a id="openQRLink" target="_blank" rel="noopener noreferrer">Open My Review Page</a>
     </div>
 
     <div class="statBox">
@@ -119,9 +119,7 @@
 
       document.getElementById("employeeId").value = user.uid;
 
-      // ✅ FIXED LINK (FOR VERCEL)
-      const REVIEW_PAGE = window.location.origin + "/index.html";
-      const qrLink = REVIEW_PAGE + "?employee=" + encodeURIComponent(user.uid);
+      const qrLink = window.location.origin + "/index.html?employee=" + encodeURIComponent(user.uid);
 
       document.getElementById("qrLink").value = qrLink;
       document.getElementById("openQRLink").href = qrLink;
@@ -138,6 +136,7 @@
         await ref.set({
           email: user.email,
           uid: user.uid,
+          active: true,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       }
@@ -189,10 +188,17 @@
       document.getElementById("monthClicks").innerText = month.clicks;
     }
 
-    function copyQRLink() {
+    async function copyQRLink() {
       const input = document.getElementById("qrLink");
-      navigator.clipboard.writeText(input.value);
-      alert("QR link copied!");
+
+      try {
+        await navigator.clipboard.writeText(input.value);
+        alert("QR link copied!");
+      } catch (error) {
+        input.select();
+        document.execCommand("copy");
+        alert("QR link copied!");
+      }
     }
 
     async function logout() {
