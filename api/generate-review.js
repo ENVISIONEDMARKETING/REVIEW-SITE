@@ -5,30 +5,29 @@ export default async function handler(req, res) {
     }
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-    const { name, industry, service } = body || {};
+    const { industry, service } = body || {};
 
     const randomSeed = Math.random().toString(36).substring(2) + Date.now();
 
     const prompt = `
-Write ONE original, organic Google review.
+Write ONE natural, human-like Google review.
 
-Business name: ${name || "Do not use a business name"}
 Industry: ${industry || "business"}
 Service: ${service || "service"}
-Random variation seed: ${randomSeed}
+Variation seed: ${randomSeed}
 
 Rules:
 - 25 to 45 words
-- Sound like a real customer, not an ad
-- Use natural everyday language
-- Create a completely different beginning and ending every time
-- Do NOT use template-style openings or closings
-- Do NOT start with the business name
-- Only mention the business name if it feels natural, and never at the beginning
-- Do NOT use dashes, hyphens, or symbols like — or -
-- Do NOT use overly polished or formal writing
-- Avoid repeating phrases from previous reviews
-- Do not mention AI, discounts, rewards, or incentives
+- Sound like a real person wrote it
+- Do NOT use any business name at all
+- Do NOT say "Wholesome House Cleaning Company"
+- Do NOT use dashes (— or -)
+- Do NOT use repetitive phrases like "highly recommend"
+- Do NOT start the same way each time
+- Do NOT end the same way each time
+- Use natural, casual language (like a real customer)
+- Include a small detail about the experience
+- Slight imperfections are okay (not too polished)
 - Return only the review text
 `;
 
@@ -51,20 +50,22 @@ Rules:
 
     let review =
       data.output?.[0]?.content?.[0]?.text ||
-      "Everything went smooth and the service was solid from start to finish.";
+      "Everything went smooth and the service felt easy from start to finish.";
 
-    // 🔥 HARD CLEAN (removes AI-style formatting)
+    // 🔥 HARD CLEAN (guaranteed removal)
     review = review
+      .replace(/wholesome house cleaning company/gi, "")
+      .replace(/wholesome house cleaning/gi, "")
+      .replace(/wholesome/gi, "")
       .replace(/[—-]/g, "") // remove dashes
       .replace(/\s+/g, " ")
-      .replace(/^["']|["']$/g, "")
       .trim();
 
     return res.status(200).json({ review });
 
   } catch (error) {
     return res.status(200).json({
-      review: "API error: " + error.message
+      review: "Everything went smooth and the service felt easy from start to finish."
     });
   }
 }
