@@ -18,17 +18,23 @@ export default async function handler(req, res) {
     ];
 
     const openings = [
-      "Start with the customer’s experience, not the business name.",
-      "Start with how the service made the customer feel.",
-      "Start with a detail about the appointment or service.",
-      "Start with a simple honest reaction.",
-      "Start with the business name naturally.",
-      "Start with appreciation for the quality of work.",
-      "Start with a comment about professionalism or timing."
+      "Start with the customer’s experience",
+      "Start with how the service felt",
+      "Start with a detail about the job",
+      "Start with a natural reaction",
+      "Start with the business name",
+      "Start with professionalism or timing"
+    ];
+
+    const nameUsage = [
+      "Do NOT mention the business name at all",
+      "Mention the business name once naturally",
+      "Mention only part of the business name (like 'the team' or 'this company')"
     ];
 
     const tone = tones[Math.floor(Math.random() * tones.length)];
     const openingRule = openings[Math.floor(Math.random() * openings.length)];
+    const nameRule = nameUsage[Math.floor(Math.random() * nameUsage.length)];
 
     const prompt = `
 Write one unique, organic Google review.
@@ -38,20 +44,20 @@ Industry: ${industry}
 Service: ${service}
 Tone: ${tone}
 Opening style: ${openingRule}
+Name usage: ${nameRule}
 Variation seed: ${randomSeed}
 
 Rules:
 - 25 to 40 words
 - Must sound like a real customer
-- Mention the business name once
 - Do NOT always start with the business name
-- Only start with the business name sometimes
-- Do not start every review with "${name}"
+- Avoid repeating the full phrase "${name}"
+- Sometimes shorten it (like "the team", "this company", or "they")
+- Make each review feel different
 - Include details that match the industry
 - Do not sound like an ad
-- Do not repeat common review phrases
-- Do not mention AI, discounts, rewards, or incentives
-- Make it different from the last review
+- Do not repeat common phrases
+- Do not mention AI, discounts, or incentives
 `;
 
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -72,7 +78,7 @@ Rules:
 
     const review =
       data.output?.[0]?.content?.[0]?.text ||
-      `I had a great experience with ${name}. Everything felt smooth, professional, and easy from start to finish.`;
+      "I had a great experience. Everything felt smooth, professional, and easy from start to finish.";
 
     return res.status(200).json({
       review: review.trim()
