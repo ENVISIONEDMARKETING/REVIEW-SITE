@@ -19,15 +19,14 @@ Variation seed: ${randomSeed}
 Rules:
 - 25 to 45 words
 - Sound like a real person wrote it
-- Do NOT use any business name at all
-- Do NOT say "Wholesome House Cleaning Company"
+- Do NOT use any business name
+- Do NOT use "wholesome" or anything similar
 - Do NOT use dashes (— or -)
-- Do NOT use repetitive phrases like "highly recommend"
-- Do NOT start the same way each time
-- Do NOT end the same way each time
-- Use natural, casual language (like a real customer)
+- Do NOT use repetitive phrases
+- Every review must start and end differently
+- Use natural language like a real customer
 - Include a small detail about the experience
-- Slight imperfections are okay (not too polished)
+- Slight imperfections are okay
 - Return only the review text
 `;
 
@@ -40,7 +39,7 @@ Rules:
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         input: prompt,
-        temperature: 1.7,
+        temperature: 1.8,
         top_p: 0.95,
         max_output_tokens: 200
       })
@@ -52,12 +51,25 @@ Rules:
       data.output?.[0]?.content?.[0]?.text ||
       "Everything went smooth and the service felt easy from start to finish.";
 
-    // 🔥 HARD CLEAN (guaranteed removal)
+    // 🔥 HARD KILL LIST (REMOVES EVERYTHING RELATED)
+    const replacements = [
+      "they",
+      "the crew",
+      "the staff",
+      "this company",
+      "the workers",
+      "these guys"
+    ];
+
+    const randomReplacement = replacements[Math.floor(Math.random() * replacements.length)];
+
     review = review
-      .replace(/wholesome house cleaning company/gi, "")
-      .replace(/wholesome house cleaning/gi, "")
-      .replace(/wholesome/gi, "")
-      .replace(/[—-]/g, "") // remove dashes
+      .replace(/saint wholesome house cleaning company/gi, randomReplacement)
+      .replace(/wholesome house cleaning company/gi, randomReplacement)
+      .replace(/wholesome house cleaning/gi, randomReplacement)
+      .replace(/wholesome/gi, randomReplacement)
+      .replace(/saint/gi, "")
+      .replace(/[—-]/g, "")
       .replace(/\s+/g, " ")
       .trim();
 
@@ -65,7 +77,7 @@ Rules:
 
   } catch (error) {
     return res.status(200).json({
-      review: "Everything went smooth and the service felt easy from start to finish."
+      review: "Everything felt easy and the service came out way better than expected."
     });
   }
 }
