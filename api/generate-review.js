@@ -17,7 +17,18 @@ export default async function handler(req, res) {
       "relaxed and conversational"
     ];
 
+    const openings = [
+      "Start with the customer’s experience, not the business name.",
+      "Start with how the service made the customer feel.",
+      "Start with a detail about the appointment or service.",
+      "Start with a simple honest reaction.",
+      "Start with the business name naturally.",
+      "Start with appreciation for the quality of work.",
+      "Start with a comment about professionalism or timing."
+    ];
+
     const tone = tones[Math.floor(Math.random() * tones.length)];
+    const openingRule = openings[Math.floor(Math.random() * openings.length)];
 
     const prompt = `
 Write one unique, organic Google review.
@@ -26,12 +37,16 @@ Business name: ${name}
 Industry: ${industry}
 Service: ${service}
 Tone: ${tone}
+Opening style: ${openingRule}
 Variation seed: ${randomSeed}
 
 Rules:
 - 25 to 40 words
 - Must sound like a real customer
 - Mention the business name once
+- Do NOT always start with the business name
+- Only start with the business name sometimes
+- Do not start every review with "${name}"
 - Include details that match the industry
 - Do not sound like an ad
 - Do not repeat common review phrases
@@ -57,7 +72,7 @@ Rules:
 
     const review =
       data.output?.[0]?.content?.[0]?.text ||
-      "I had a great experience with this business. Everything was smooth and professional.";
+      `I had a great experience with ${name}. Everything felt smooth, professional, and easy from start to finish.`;
 
     return res.status(200).json({
       review: review.trim()
