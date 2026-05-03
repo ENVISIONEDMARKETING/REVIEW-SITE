@@ -17,47 +17,37 @@ export default async function handler(req, res) {
       "relaxed and conversational"
     ];
 
-    const openings = [
-      "Start with the customer’s experience",
-      "Start with how the service felt",
-      "Start with a detail about the job",
-      "Start with a natural reaction",
-      "Start with the business name",
-      "Start with professionalism or timing"
-    ];
-
-    const nameUsage = [
-      "Do NOT mention the business name at all",
-      "Mention the business name once naturally",
-      "Mention only part of the business name (like 'the team' or 'this company')"
+    const nameUsageRules = [
+      "Do not mention the business name at all.",
+      "Refer to them only as 'the team'.",
+      "Refer to them only as 'they'.",
+      "Refer to them only as 'this company'.",
+      "Mention the business name naturally one time only."
     ];
 
     const tone = tones[Math.floor(Math.random() * tones.length)];
-    const openingRule = openings[Math.floor(Math.random() * openings.length)];
-    const nameRule = nameUsage[Math.floor(Math.random() * nameUsage.length)];
+    const nameRule = nameUsageRules[Math.floor(Math.random() * nameUsageRules.length)];
 
     const prompt = `
 Write one unique, organic Google review.
 
 Business name: ${name}
-Industry: ${industry}
-Service: ${service}
+Industry: ${industry || "business"}
+Service: ${service || "service"}
 Tone: ${tone}
-Opening style: ${openingRule}
-Name usage: ${nameRule}
+Name rule: ${nameRule}
 Variation seed: ${randomSeed}
 
 Rules:
 - 25 to 40 words
-- Must sound like a real customer
-- Do NOT always start with the business name
-- Avoid repeating the full phrase "${name}"
-- Sometimes shorten it (like "the team", "this company", or "they")
-- Make each review feel different
+- Sound like a real customer
+- Do NOT always use the business name
+- Do NOT repeatedly say "${name}"
+- If the name rule says not to mention the business name, do not include it
+- Use natural words like "they", "the team", or "this company"
 - Include details that match the industry
 - Do not sound like an ad
-- Do not repeat common phrases
-- Do not mention AI, discounts, or incentives
+- Do not mention AI, discounts, rewards, or incentives
 `;
 
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -69,19 +59,50 @@ Rules:
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         input: prompt,
-        temperature: 1.2,
+        temperature: 1.3,
         max_output_tokens: 200
       })
     });
 
     const data = await response.json();
 
-    const review =
+    let review =
       data.output?.[0]?.content?.[0]?.text ||
-      "I had a great experience. Everything felt smooth, professional, and easy from start to finish.";
+      "They did a great job. Everything felt smooth, professional, and easy from start to finish.";
+
+    // HARD FIX: remove repeated business name if AI keeps using it
+    if (name) {
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const nameRegex = new RegExp(escapedName, "gi");
+
+      const matches = review.match(nameRegex);
+
+      // If name appears more than once, remove all extra mentions
+      if (matches && matches.length > 1) {
+        let first = true;
+        review = review.replace(nameRegex, function(match) {
+          if (first) {
+            first = false;
+            return match;
+          }
+          return "they";
+        });
+      }
+
+      // Sometimes remove the name completely for variety
+      if (Math.random() < 0.6) {
+        review = review.replace(nameRegex, "they");
+      }
+    }
+
+    review = review
+      .replace(/\s+/g, " ")
+      .replace(/\bthey\s+they\b/gi, "they")
+      .replace(/\bThey\s+they\b/g, "They")
+      .trim();
 
     return res.status(200).json({
-      review: review.trim()
+      review
     });
 
   } catch (error) {
