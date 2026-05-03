@@ -19,30 +19,29 @@ export default async function handler(req, res) {
 
     const tone = tones[Math.floor(Math.random() * tones.length)];
 
-    // ✅ Only allow company name sometimes
-    const allowBusinessName = Math.random() < 0.25;
-
-    const businessLine = allowBusinessName
-      ? `Business name: ${name}`
-      : `Business name: Do not use the business name in this review.`;
+    // Only allow business name 10% of the time
+    const allowBusinessName = Math.random() < 0.10;
 
     const prompt = `
 Write one unique, organic Google review.
 
-${businessLine}
 Industry: ${industry || "business"}
 Service: ${service || "service"}
 Tone: ${tone}
 Variation seed: ${randomSeed}
 
+Business name: ${allowBusinessName ? name : "DO NOT USE THE BUSINESS NAME"}
+
 Rules:
 - 25 to 40 words
 - Sound like a real customer
-- Do NOT sound like an ad
-- Do NOT mention AI, discounts, rewards, or incentives
-- Include details that match the industry
-- Use natural words like "they", "the team", or "this company"
-- If told not to use the business name, do not include it at all
+- DO NOT start with the business name
+- Start with the experience, service, timing, quality, or professionalism
+- Use words like "they", "the team", or "this company"
+- If the business name is allowed, mention it later in the review, never first
+- If business name says DO NOT USE, do not include it at all
+- Do not sound like an ad
+- Do not mention AI, discounts, rewards, or incentives
 `;
 
     const response = await fetch("https://api.openai.com/v1/responses", {
@@ -54,7 +53,7 @@ Rules:
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         input: prompt,
-        temperature: 1.3,
+        temperature: 1.4,
         max_output_tokens: 200
       })
     });
@@ -65,19 +64,27 @@ Rules:
       data.output?.[0]?.content?.[0]?.text ||
       "They did a great job. Everything felt smooth, professional, and easy from start to finish.";
 
-    // ✅ Hard remove company name 75% of the time
+    // Hard remove the business name if not allowed
     if (name && !allowBusinessName) {
       const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const nameRegex = new RegExp(escapedName, "gi");
+      review = review.replace(nameRegex, "the team");
+    }
 
-      review = review.replace(nameRegex, "they");
+    // If it starts with business name, force rewrite beginning
+    if (name) {
+      const lowerReview = review.toLowerCase().trim();
+      const lowerName = name.toLowerCase().trim();
+
+      if (lowerReview.startsWith(lowerName)) {
+        review = review.replace(new RegExp("^" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), "They");
+      }
     }
 
     review = review
       .replace(/\s+/g, " ")
-      .replace(/\bthey was\b/gi, "they were")
-      .replace(/\bthey did\b/gi, "They did")
-      .replace(/\bthey were\b/gi, "They were")
+      .replace(/\bthe team was\b/gi, "the team was")
+      .replace(/\bthe team were\b/gi, "the team was")
       .trim();
 
     return res.status(200).json({ review });
