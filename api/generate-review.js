@@ -1,3 +1,4 @@
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "POST") {
@@ -43,16 +44,16 @@ export default async function handler(req, res) {
     ];
 
     const structures = [
-      "one longer sentence followed by one short sentence",
-      "three short sentences",
-      "two medium length sentences",
-      "one short opening sentence followed by a more detailed sentence",
-      "three sentences with noticeably different lengths",
-      "two casual conversational sentences",
-      "one detailed sentence followed by a casual observation",
-      "a short statement followed by two natural sentences",
-      "two sentences where the second sentence is much shorter",
-      "three sentences with the middle sentence being the shortest"
+      "a short sentence, a longer sentence, and a medium sentence in each paragraph",
+      "three conversational sentences with varied lengths per paragraph",
+      "a detailed sentence followed by two shorter sentences per paragraph",
+      "three sentences that build naturally on each other per paragraph",
+      "a short observation, a detailed thought, and a casual ending per paragraph",
+      "a medium sentence, a short sentence, and a longer sentence per paragraph",
+      "six sentences with noticeably varied lengths across two paragraphs",
+      "three relaxed conversational sentences in each paragraph",
+      "two medium sentences followed by one short sentence per paragraph",
+      "a longer opening sentence followed by two natural observations per paragraph"
     ];
 
     const openings = [
@@ -103,7 +104,7 @@ export default async function handler(req, res) {
     const selectedDetail = pickRandom(detailTypes);
 
     const prompt = `
-Write ONE fictional sample Google review style paragraph.
+Write ONE fictional sample Google review style text.
 
 Industry: ${industry || "business"}
 Service: ${service || "service"}
@@ -121,7 +122,12 @@ Small detail approach: ${selectedDetail}
 
 STRICT RULES:
 
-- 25 to 45 words
+- 55 to 85 words total
+- Write exactly 6 sentences
+- Organize the review into exactly 2 paragraphs
+- Each paragraph MUST contain exactly 3 sentences
+- Separate the two paragraphs with one blank line
+- Make the transition between paragraphs sound natural
 - Sound like a real person naturally typing their thoughts
 - Make the wording and sentence pattern noticeably different every generation
 - Do NOT use any business name
@@ -185,7 +191,7 @@ Return ONLY the review text.
         input: prompt,
         temperature: 1.8,
         top_p: 0.95,
-        max_output_tokens: 200
+        max_output_tokens: 250
       })
     });
 
@@ -193,9 +199,9 @@ Return ONLY the review text.
 
     let review =
       data.output?.[0]?.content?.[0]?.text ||
-      "Everything went smooth and the service felt easy from start to finish.";
+      "The appointment was easy to arrange. Communication was clear. The work was completed as discussed. Everything looked organized afterward. The result matched what I expected. The process felt straightforward.";
 
-    // 🔥 HARD KILL LIST (REMOVES EVERYTHING RELATED)
+    // HARD KILL LIST
     const replacements = [
       "they",
       "the crew",
@@ -205,8 +211,7 @@ Return ONLY the review text.
       "these guys"
     ];
 
-    const randomReplacement =
-      replacements[Math.floor(Math.random() * replacements.length)];
+    const randomReplacement = pickRandom(replacements);
 
     review = review
       .replace(/saint wholesome house cleaning company/gi, randomReplacement)
@@ -218,11 +223,37 @@ Return ONLY the review text.
       .replace(/\s+/g, " ")
       .trim();
 
+    // FORCE 6 SENTENCES INTO 2 PARAGRAPHS
+    // Exactly 3 sentences in each paragraph
+
+    const sentences = review
+      .match(/[^.!?]+[.!?]+|[^.!?]+$/g)
+      ?.map(sentence => sentence.trim())
+      .filter(Boolean) || [];
+
+    if (sentences.length === 6) {
+      review = [
+        sentences.slice(0, 3).join(" "),
+        sentences.slice(3, 6).join(" ")
+      ].join("\n\n");
+    } else {
+      // Preserve the generated text if sentence count differs.
+      // Separate near the midpoint rather than cutting off text.
+      const midpoint = Math.ceil(sentences.length / 2);
+
+      if (sentences.length >= 2) {
+        review = [
+          sentences.slice(0, midpoint).join(" "),
+          sentences.slice(midpoint).join(" ")
+        ].join("\n\n");
+      }
+    }
+
     return res.status(200).json({ review });
 
   } catch (error) {
     return res.status(200).json({
-      review: "Everything felt easy and the service came out way better than expected."
+      review: "The appointment was easy to arrange. Communication was clear. Everything was explained beforehand.\n\nThe work was completed as discussed. The finished result looked organized. The process felt straightforward."
     });
   }
 }
